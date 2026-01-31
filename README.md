@@ -1,144 +1,181 @@
-# verovioxide
+# Verovioxide
 
-Safe Rust bindings to [Verovio](https://www.verovio.org/), the music notation engraving library.
+[![CI](https://github.com/oxur/verovioxide/actions/workflows/ci.yml/badge.svg)](https://github.com/oxur/verovioxide/actions/workflows/ci.yml)
+[![crates.io](https://img.shields.io/crates/v/verovioxide.svg)](https://crates.io/crates/verovioxide)
+[![docs.rs](https://docs.rs/verovioxide/badge.svg)](https://docs.rs/verovioxide)
 
-## Vision
+Safe Rust bindings to the [Verovio](https://www.verovio.org/) music notation engraving library.
 
-**verovioxide** aims to bring professional-quality music notation rendering to the Rust ecosystem. Verovio is a fast, lightweight C++ library that renders MusicXML, MEI, ABC, and Humdrum notation to beautiful SVG output — and now Rust developers can use it too.
+## Features
 
-This project is part of a larger effort to build modern, composable tools for working with music notation programmatically. We believe that:
+- Render MusicXML, MEI, ABC, Humdrum, and Plaine & Easie to SVG
+- Bundled SMuFL fonts (Leipzig, Bravura, Gootville, Leland, Petaluma)
+- Type-safe Options API with serde serialization
+- No runtime dependencies (statically linked Verovio)
+- Safe Rust wrapper over C FFI
 
-- **Music notation should be accessible** — not locked inside proprietary software
-- **Rendering should be fast and embeddable** — suitable for servers, CLI tools, and interactive applications
-- **The Rust ecosystem deserves first-class music tooling**
+## Installation
 
-## Status
+```bash
+cargo add verovioxide
+```
 
-🚧 **Early Development** — Early planning phases
-
-We're actively building the foundation:
-
-- [ ] `verovioxide-sys` — Raw FFI bindings to Verovio's C API
-- [ ] `verovioxide-data` — Bundled SMuFL fonts (Leipzig, Bravura, etc.)
-- [ ] `verovioxide` — Safe, idiomatic Rust API
-
-## Planned Features
-
-- 🎼 **Multi-format input** — MusicXML, MEI, ABC notation, Humdrum
-- 🎨 **SVG output** — Clean, scalable vector graphics
-- 📦 **Bundled fonts** — No external dependencies required
-- 🔧 **Typed options API** — Configure rendering with Rust's type safety
-- ⚡ **Static linking** — Single binary deployment
-
-## Quick Preview
-
-*API is subject to change*
+## Quick Start
 
 ```rust
-use verovioxide::{Toolkit, Options};
+use verovioxide::{Toolkit, Options, Result};
 
-fn main() -> verovioxide::Result<()> {
+fn main() -> Result<()> {
+    // Create a toolkit with bundled resources
     let mut toolkit = Toolkit::new()?;
 
-    let options = Options::new()
-        .scale(40)
-        .adjust_page_height(true);
+    // Load MEI data
+    let mei = r#"<?xml version="1.0" encoding="UTF-8"?>
+    <mei xmlns="http://www.music-encoding.org/ns/mei">
+      <music><body><mdiv><score>
+        <scoreDef><staffGrp>
+          <staffDef n="1" lines="5" clef.shape="G" clef.line="2"/>
+        </staffGrp></scoreDef>
+        <section><measure><staff n="1"><layer n="1">
+          <note pname="c" oct="4" dur="4"/>
+        </layer></staff></measure></section>
+      </score></mdiv></body></music>
+    </mei>"#;
+
+    toolkit.load_data(mei)?;
+
+    // Configure rendering options
+    let options = Options::builder()
+        .scale(100)
+        .adjust_page_height(true)
+        .build();
     toolkit.set_options(&options)?;
 
-    let musicxml = std::fs::read_to_string("score.musicxml")?;
-    toolkit.load_data(&musicxml)?;
-
-    for page in 1..=toolkit.page_count() {
-        let svg = toolkit.render_to_svg(page)?;
-        std::fs::write(format!("page-{}.svg", page), &svg)?;
-    }
+    // Render to SVG
+    let svg = toolkit.render_to_svg(1)?;
+    println!("Rendered {} bytes of SVG", svg.len());
 
     Ok(())
 }
 ```
 
-## The Bigger Picture
+### Loading from Files
 
-**verovioxide** is one piece of a growing ecosystem for music notation in Rust:
+```rust
+use verovioxide::Toolkit;
+use std::path::Path;
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                                                         │
-│    Fermata Lisp                                         │
-│    (S-expression DSL for music notation)                │
-│                         │                               │
-│                         ▼                               │
-│    ┌───────────────────────────────────────┐            │
-│    │                MusicXML               │            │
-│    └───────────────────────────────────────┘            │
-│                         │                               │
-│                         ▼                               │
-│    ┌───────────────────────────────────────┐            │
-│    │               verovioxide             │  ◄── you are here
-│    │        (Rust bindings to Verovio)     │            │
-│    └───────────────────────────────────────┘            │
-│                         │                               │
-│                         ▼                               │
-│                        SVG                              │
-│                                                         │
-└─────────────────────────────────────────────────────────┘
+let mut toolkit = Toolkit::new()?;
+toolkit.load_file(Path::new("score.musicxml"))?;
+
+let svg = toolkit.render_to_svg(1)?;
 ```
 
-We're also developing [**Fermata**](https://github.com/oxur/fermata) — a Lisp-based DSL that compiles to MusicXML, making it easy to express musical ideas in code:
+### Configuring Options
 
-```lisp
-;; Fermata syntax (coming soon)
-(score
-  (part :piano
-    (measure
-      (chord :q (c4 e4 g4))
-      (chord :q (d4 f4 a4))
-      (chord :h (g3 b3 d4 g4)))))
+```rust
+use verovioxide::{Options, BreakMode, HeaderMode};
+
+let options = Options::builder()
+    .scale(80)                          // 80% scale
+    .page_width(2100)                   // A4 width in MEI units
+    .page_height(2970)                  // A4 height
+    .adjust_page_height(true)           // Fit content
+    .font("Bravura")                    // Use Bravura font
+    .breaks(BreakMode::Auto)            // Automatic page breaks
+    .header(HeaderMode::None)           // No header
+    .build();
 ```
 
-## Building
+## Supported Input Formats
+
+| Format | Extensions | Notes |
+|--------|------------|-------|
+| MusicXML | `.musicxml`, `.xml`, `.mxl` | Standard music interchange format |
+| MEI | `.mei` | Music Encoding Initiative XML |
+| ABC | `.abc` | Text-based notation format |
+| Humdrum | `.krn`, `.hmd` | Kern and other Humdrum formats |
+| PAE | - | Plaine & Easie Code (RISM) |
+
+Format detection is automatic based on file content.
+
+## Feature Flags
+
+| Feature | Default | Description |
+|---------|---------|-------------|
+| `bundled-data` | Yes | Include bundled SMuFL fonts and resources |
+| `font-leipzig` | Yes | Leipzig SMuFL font (default font) |
+| `font-bravura` | No | Bravura SMuFL font |
+| `font-gootville` | No | Gootville SMuFL font |
+| `font-leland` | No | Leland SMuFL font |
+| `font-petaluma` | No | Petaluma SMuFL font |
+| `all-fonts` | No | Enable all fonts |
+
+Note: Bravura baseline data is always included as it is required for Verovio's glyph name table.
+
+To enable additional fonts:
+
+```toml
+[dependencies]
+verovioxide = { version = "0.0.1", features = ["font-bravura", "font-leland"] }
+```
+
+To disable bundled data and provide your own resource path:
+
+```toml
+[dependencies]
+verovioxide = { version = "0.0.1", default-features = false }
+```
+
+Then use `Toolkit::with_resource_path()`:
+
+```rust
+use verovioxide::Toolkit;
+use std::path::Path;
+
+let toolkit = Toolkit::with_resource_path(Path::new("/path/to/verovio/data"))?;
+```
+
+## Building from Source
+
+Clone with submodules (Verovio is included as a Git submodule):
 
 ```bash
-# Clone with submodules
 git clone --recursive https://github.com/oxur/verovioxide.git
 cd verovioxide
-
-# Build
-cargo build --release
-
-# Run tests
-cargo test
-
-# Run example
-cargo run --example render_musicxml -- path/to/score.musicxml output.svg
 ```
 
-### Requirements
+Build and test:
 
-- Rust 1.75+ (we use edition 2024 features)
-- CMake 3.14+
-- C++20 compiler (clang 14+ or gcc 11+)
+```bash
+cargo build
+cargo test
+```
+
+Run an example:
+
+```bash
+cargo run --example render_abc
+cargo run --example render_musicxml -- input.musicxml output.svg
+```
+
+## Crate Structure
+
+- **verovioxide** - High-level safe Rust API
+- **verovioxide-sys** - Low-level FFI bindings to Verovio C API
+- **verovioxide-data** - Bundled SMuFL fonts and resources
 
 ## License
 
-This project is dual-licensed under MIT OR Apache-2.0, at your option.
+This project is licensed under the Apache License 2.0.
 
-**Note:** verovioxide links against [Verovio](https://github.com/rism-digital/verovio) (LGPL-2.1-or-later) and includes SMuFL fonts (SIL Open Font License 1.1). See [NOTICE](NOTICE) for full attribution.
+**Dependencies:**
+
+- [Verovio](https://www.verovio.org/) is licensed under the LGPL-3.0
+- SMuFL fonts have their own licenses (see the respective font directories)
 
 ## Acknowledgments
 
-- [Verovio](https://www.verovio.org/) by RISM Digital — the incredible engraving library that makes this possible
-- [SMuFL](https://www.smufl.org/) — Standard Music Font Layout specification
-- The Rust community for inspiration and tooling
-
-## Contributing
-
-We welcome contributions! This project is in early stages, so there's plenty of opportunity to shape its direction.
-
-- 🐛 **Bug reports** — Open an issue
-- 💡 **Feature ideas** — Start a discussion
-- 🔧 **Code contributions** — PRs welcome (please open an issue first for major changes)
-
----
-
-*Part of the [oxur](https://github.com/oxur) organization*
+- [Verovio](https://www.verovio.org/) - The music notation engraving library
+- [SMuFL](https://www.smufl.org/) - Standard Music Font Layout specification
+- The music encoding community for MEI, MusicXML, and other formats
