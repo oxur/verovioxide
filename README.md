@@ -120,14 +120,14 @@ To enable additional fonts:
 
 ```toml
 [dependencies]
-verovioxide = { version = "0.0.1", features = ["font-bravura", "font-leland"] }
+verovioxide = { version = "0.1.0", features = ["font-bravura", "font-leland"] }
 ```
 
 To disable bundled data and provide your own resource path:
 
 ```toml
 [dependencies]
-verovioxide = { version = "0.0.1", default-features = false }
+verovioxide = { version = "0.1.0", default-features = false }
 ```
 
 Then use `Toolkit::with_resource_path()`:
@@ -155,11 +155,15 @@ cargo build
 cargo test
 ```
 
-Run an example:
+Note that the first build could take a while, since you'll also be building `verovio` under the bonnet.
+
+Run some examples:
 
 ```bash
 cargo run --example render_abc
-cargo run --example render_musicxml -- input.musicxml output.svg
+cargo run --example render_musicxml -- \
+  test-fixtures/musicxml/simple.musicxml \
+  simple.svg
 ```
 
 ## Crate Structure
