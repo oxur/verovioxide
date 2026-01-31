@@ -77,18 +77,13 @@ pub enum HeaderMode {
 }
 
 /// SMuFL text font to use for text rendering.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TextFont {
     /// Times font (default).
+    #[default]
     Times,
     /// Custom font name.
     Custom(String),
-}
-
-impl Default for TextFont {
-    fn default() -> Self {
-        Self::Times
-    }
 }
 
 impl TextFont {
