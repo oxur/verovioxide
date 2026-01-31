@@ -1,10 +1,13 @@
 # Verovioxide
 
-[![CI](https://github.com/oxur/verovioxide/actions/workflows/ci.yml/badge.svg)](https://github.com/oxur/verovioxide/actions/workflows/ci.yml)
-[![crates.io](https://img.shields.io/crates/v/verovioxide.svg)](https://crates.io/crates/verovioxide)
-[![docs.rs](https://docs.rs/verovioxide/badge.svg)](https://docs.rs/verovioxide)
+[![][build-badge]][build]
+[![][crate-badge]][crate]
+[![][tag-badge]][tag]
+[![][docs-badge]][docs]
 
-Safe Rust bindings to the [Verovio](https://www.verovio.org/) music notation engraving library.
+[![][logo]][logo-large]
+
+*Safe Rust bindings to the [Verovio](https://www.verovio.org/) music notation engraving library*
 
 ## Features
 
@@ -179,3 +182,16 @@ This project is licensed under the Apache License 2.0.
 - [Verovio](https://www.verovio.org/) - The music notation engraving library
 - [SMuFL](https://www.smufl.org/) - Standard Music Font Layout specification
 - The music encoding community for MEI, MusicXML, and other formats
+
+[//]: ---Named-Links---
+
+[logo]: assets/images/logo/v1-x250.png
+[logo-large]: assets/images/logo/v1.png
+[build]: https://github.com/oxur/verovioxide/actions/workflows/ci.yml
+[build-badge]: https://github.com/oxur/verovioxide/actions/workflows/ci.yml/badge.svg
+[crate]: https://crates.io/crates/verovioxide
+[crate-badge]: https://img.shields.io/crates/v/verovioxide.svg
+[docs]: https://docs.rs/verovioxide/
+[docs-badge]: https://img.shields.io/badge/rust-documentation-blue.svg
+[tag-badge]: https://img.shields.io/github/tag/oxur/verovioxide.svg
+[tag]: https://github.com/oxur/verovioxide/tags
