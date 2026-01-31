@@ -160,11 +160,18 @@ Note that the first build could take a while, since you'll also be building `ver
 Run some examples:
 
 ```bash
-cargo run --example render_abc
 cargo run --example render_musicxml -- \
   test-fixtures/musicxml/simple.musicxml \
   simple.svg
 ```
+
+[![][simple-example]][simple-example]
+
+```bash
+cargo run --example render_abc
+```
+
+[![][twinkle-example]][twinkle-example]
 
 ## Crate Structure
 
@@ -193,3 +200,4 @@ This project is licensed under the Apache License 2.0.
 [docs-badge]: https://img.shields.io/badge/rust-documentation-blue.svg
 [tag-badge]: https://img.shields.io/github/tag/oxur/verovioxide.svg
 [tag]: https://github.com/oxur/verovioxide/tags
+
