@@ -60,8 +60,9 @@ fn get_cached_library_path() -> PathBuf {
 /// - The `force-rebuild` feature is enabled
 /// - The cached library file doesn't exist
 fn should_use_cache() -> bool {
-    // Check for force-rebuild feature
-    if cfg!(feature = "force-rebuild") {
+    // Check for force-rebuild feature via environment variable
+    // (cfg! is compile-time, but we need runtime check in build scripts)
+    if std::env::var("CARGO_FEATURE_FORCE_REBUILD").is_ok() {
         println!("cargo:warning=force-rebuild feature enabled, recompiling Verovio");
         return false;
     }
@@ -141,7 +142,8 @@ fn cache_compiled_library(out_dir: &std::path::Path) {
 
 fn main() {
     // Only compile when the bundled feature is enabled
-    if !cfg!(feature = "bundled") {
+    // (use env var since cfg! is compile-time, not runtime in build scripts)
+    if std::env::var("CARGO_FEATURE_BUNDLED").is_err() {
         return;
     }
 
