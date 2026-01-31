@@ -931,9 +931,10 @@ mod tests {
             assert!(!options_ptr.is_null());
 
             let options = CStr::from_ptr(options_ptr).to_string_lossy();
-            // Options should be a JSON object
-            assert!(options.starts_with('{'));
-            assert!(options.ends_with('}'));
+            // Options should be a JSON object (may have trailing whitespace)
+            let trimmed = options.trim();
+            assert!(trimmed.starts_with('{'));
+            assert!(trimmed.ends_with('}'));
 
             vrvToolkit_destructor(toolkit);
         }

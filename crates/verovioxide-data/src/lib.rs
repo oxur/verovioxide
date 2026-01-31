@@ -358,7 +358,10 @@ mod tests {
     fn test_text_directory_contains_times_font() {
         let dir = resource_dir();
         let text_dir = dir.get_dir("text").expect("text/ should exist");
-        let times = text_dir.get_file("Times.xml");
-        assert!(times.is_some(), "Times.xml should exist in text/");
+
+        // include_dir stores full paths from the included directory root
+        // So we need to check for "text/Times.xml" not just "Times.xml"
+        let times = text_dir.get_file("text/Times.xml");
+        assert!(times.is_some(), "text/Times.xml should exist in text directory");
     }
 }
