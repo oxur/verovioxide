@@ -1,12 +1,24 @@
 [package]
 name = "verovioxide-data"
-description = "Data structures and types for Verovio music notation"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-keywords = ["mei", "music", "notation", "verovio"]
-categories = ["data-structures"]
+description = "Bundled SMuFL fonts and resources for verovioxide"
+keywords = ["mei", "music", "notation", "verovio", "smufl"]
+categories = ["multimedia::encoding"]
+
+[features]
+default = ["font-leipzig"]
+font-leipzig = []
+font-bravura = []
+font-gootville = []
+font-leland = []
+font-petaluma = []
+all-fonts = ["font-leipzig", "font-bravura", "font-gootville", "font-leland", "font-petaluma"]
 
 [dependencies]
+include_dir = "0.7"
+tempfile = "3"
+thiserror = "2"

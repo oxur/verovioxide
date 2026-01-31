@@ -1,0 +1,44 @@
+verovioxide
+Copyright (c) 2026 oxur contributors
+
+This project is licensed under the MIT License or Apache License 2.0,
+at your option.
+
+-------------------------------------------------------------------------------
+
+This project includes or links to the following third-party components:
+
+-------------------------------------------------------------------------------
+
+Verovio - Music notation engraving library
+Copyright (c) RISM Digital Center and contributors
+Licensed under LGPL-2.1-or-later
+https://github.com/rism-digital/verovio
+
+-------------------------------------------------------------------------------
+
+Leipzig Font
+Copyright (c) 2018 RISM Digital Center
+Licensed under SIL Open Font License 1.1
+
+Bravura Font
+Copyright (c) Steinberg Media Technologies GmbH
+Licensed under SIL Open Font License 1.1
+
+Gootville Font
+Copyright (c) MuseScore BVBA (Grzegorz Pruchniakowski)
+Licensed under SIL Open Font License 1.1
+
+Leland Font
+Copyright (c) MuseScore BVBA
+Licensed under SIL Open Font License 1.1
+
+Petaluma Font
+Copyright (c) Steinberg Media Technologies GmbH
+Licensed under SIL Open Font License 1.1
+
+-------------------------------------------------------------------------------
+
+Liberation Fonts
+Copyright (c) 2007 Red Hat, Inc.
+Licensed under SIL Open Font License 1.1

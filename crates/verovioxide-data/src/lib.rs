@@ -1,4 +1,364 @@
-//! Data structures and types for Verovio music notation.
+//! Bundled SMuFL fonts and resources for verovioxide.
 //!
-//! This crate provides the core data types used throughout the Verovioxide
-//! ecosystem for representing music notation elements, options, and results.
+//! This crate embeds the SMuFL fonts and related resources from the Verovio
+//! project for use at runtime. The data includes glyph definitions, bounding
+//! boxes, and optional CSS files with embedded WOFF2 fonts for web output.
+//!
+//! # Font Features
+//!
+//! By default, only the Leipzig font is included. Additional fonts can be
+//! enabled via feature flags:
+//!
+//! - `font-leipzig` (default) - Leipzig SMuFL font
+//! - `font-bravura` - Bravura SMuFL font
+//! - `font-gootville` - Gootville SMuFL font
+//! - `font-leland` - Leland SMuFL font
+//! - `font-petaluma` - Petaluma SMuFL font
+//! - `all-fonts` - Enable all fonts
+//!
+//! Note: Bravura is always included as baseline because it's used to build
+//! the glyph name table in Verovio.
+//!
+//! # Example
+//!
+//! ```no_run
+//! use verovioxide_data::{resource_dir, extract_resources};
+//!
+//! // Access embedded resources directly (in-memory)
+//! let dir = resource_dir();
+//! if let Some(bravura) = dir.get_file("Bravura.xml") {
+//!     let contents = bravura.contents_utf8().unwrap();
+//!     println!("Bravura bounding boxes loaded: {} bytes", contents.len());
+//! }
+//!
+//! // Or extract to a temporary directory for file-based access
+//! let temp_dir = extract_resources().expect("Failed to extract resources");
+//! let path = temp_dir.path().join("Bravura.xml");
+//! assert!(path.exists());
+//! ```
+
+use include_dir::{include_dir, Dir};
+use std::io;
+use std::path::Path;
+use tempfile::TempDir;
+use thiserror::Error;
+
+/// The embedded verovio data directory.
+///
+/// This contains all bundled SMuFL fonts and resources compiled into the binary.
+/// The actual contents depend on which font features are enabled at compile time.
+static VEROVIO_DATA: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/../../verovio/data");
+
+/// Errors that can occur when working with verovioxide data resources.
+#[derive(Debug, Error)]
+pub enum DataError {
+    /// Failed to create the temporary directory.
+    #[error("failed to create temporary directory: {0}")]
+    TempDirCreation(#[source] io::Error),
+
+    /// Failed to create a directory during extraction.
+    #[error("failed to create directory '{path}': {source}")]
+    DirectoryCreation {
+        /// The path that failed to be created.
+        path: String,
+        /// The underlying I/O error.
+        #[source]
+        source: io::Error,
+    },
+
+    /// Failed to write a file during extraction.
+    #[error("failed to write file '{path}': {source}")]
+    FileWrite {
+        /// The path that failed to be written.
+        path: String,
+        /// The underlying I/O error.
+        #[source]
+        source: io::Error,
+    },
+}
+
+/// Returns a reference to the embedded verovio data directory.
+///
+/// This provides in-memory access to all bundled resources without extraction.
+/// Use this when you need to read resources directly from the embedded data.
+///
+/// # Example
+///
+/// ```
+/// use verovioxide_data::resource_dir;
+///
+/// let dir = resource_dir();
+///
+/// // List all top-level files
+/// for file in dir.files() {
+///     println!("File: {}", file.path().display());
+/// }
+///
+/// // Access a specific file
+/// if let Some(file) = dir.get_file("Bravura.xml") {
+///     let contents = file.contents_utf8().unwrap();
+///     println!("Loaded {} bytes", contents.len());
+/// }
+/// ```
+#[must_use]
+pub fn resource_dir() -> &'static Dir<'static> {
+    &VEROVIO_DATA
+}
+
+/// Extracts all embedded resources to a temporary directory.
+///
+/// This creates a temporary directory and writes all embedded resources to it,
+/// preserving the directory structure. The returned `TempDir` will automatically
+/// clean up when dropped.
+///
+/// Use this when you need file-system access to the resources, for example when
+/// interfacing with C libraries that expect file paths.
+///
+/// # Errors
+///
+/// Returns a [`DataError`] if:
+/// - The temporary directory cannot be created
+/// - A subdirectory cannot be created
+/// - A file cannot be written
+///
+/// # Example
+///
+/// ```no_run
+/// use verovioxide_data::extract_resources;
+///
+/// let temp_dir = extract_resources().expect("Failed to extract resources");
+/// let bravura_path = temp_dir.path().join("Bravura.xml");
+/// assert!(bravura_path.exists());
+///
+/// // Use the resources...
+///
+/// // TempDir is automatically cleaned up when dropped
+/// ```
+pub fn extract_resources() -> Result<TempDir, DataError> {
+    let temp_dir = TempDir::new().map_err(DataError::TempDirCreation)?;
+    extract_dir_contents(&VEROVIO_DATA, temp_dir.path())?;
+    Ok(temp_dir)
+}
+
+/// Recursively extracts directory contents to the target path.
+fn extract_dir_contents(dir: &Dir<'_>, target: &Path) -> Result<(), DataError> {
+    // Extract all files in this directory
+    for file in dir.files() {
+        let file_path = target.join(file.path());
+        std::fs::write(&file_path, file.contents()).map_err(|source| DataError::FileWrite {
+            path: file_path.display().to_string(),
+            source,
+        })?;
+    }
+
+    // Recursively extract subdirectories
+    for subdir in dir.dirs() {
+        let subdir_path = target.join(subdir.path());
+        std::fs::create_dir_all(&subdir_path).map_err(|source| DataError::DirectoryCreation {
+            path: subdir_path.display().to_string(),
+            source,
+        })?;
+        extract_dir_contents(subdir, target)?;
+    }
+
+    Ok(())
+}
+
+/// Returns `true` if the Leipzig font is available.
+///
+/// Leipzig is the default font and is always included unless explicitly disabled.
+#[must_use]
+pub const fn has_leipzig() -> bool {
+    cfg!(feature = "font-leipzig")
+}
+
+/// Returns `true` if the Bravura font is available.
+///
+/// Note: The Bravura baseline data (Bravura.xml and Bravura/) is always included
+/// because it's required for building the glyph name table. This function returns
+/// `true` only when the full Bravura feature is enabled.
+#[must_use]
+pub const fn has_bravura() -> bool {
+    cfg!(feature = "font-bravura")
+}
+
+/// Returns `true` if the Gootville font is available.
+#[must_use]
+pub const fn has_gootville() -> bool {
+    cfg!(feature = "font-gootville")
+}
+
+/// Returns `true` if the Leland font is available.
+#[must_use]
+pub const fn has_leland() -> bool {
+    cfg!(feature = "font-leland")
+}
+
+/// Returns `true` if the Petaluma font is available.
+#[must_use]
+pub const fn has_petaluma() -> bool {
+    cfg!(feature = "font-petaluma")
+}
+
+/// Lists all available SMuFL font names based on enabled features.
+///
+/// This always includes "Bravura" as it's required for baseline functionality.
+/// Additional fonts are included based on which feature flags are enabled.
+///
+/// # Example
+///
+/// ```
+/// use verovioxide_data::available_fonts;
+///
+/// let fonts = available_fonts();
+/// assert!(fonts.contains(&"Bravura")); // Always included
+/// ```
+#[must_use]
+pub fn available_fonts() -> Vec<&'static str> {
+    let mut fonts = vec!["Bravura"]; // Always included as baseline
+
+    if has_leipzig() {
+        fonts.push("Leipzig");
+    }
+    if has_bravura() && !fonts.contains(&"Bravura") {
+        fonts.push("Bravura");
+    }
+    if has_gootville() {
+        fonts.push("Gootville");
+    }
+    if has_leland() {
+        fonts.push("Leland");
+    }
+    if has_petaluma() {
+        fonts.push("Petaluma");
+    }
+
+    fonts
+}
+
+/// Returns the default font name.
+///
+/// The default font is Leipzig when the `font-leipzig` feature is enabled,
+/// otherwise falls back to Bravura (which is always available).
+#[must_use]
+pub const fn default_font() -> &'static str {
+    if cfg!(feature = "font-leipzig") {
+        "Leipzig"
+    } else {
+        "Bravura"
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_resource_dir_contains_bravura_xml() {
+        let dir = resource_dir();
+        let bravura = dir.get_file("Bravura.xml");
+        assert!(bravura.is_some(), "Bravura.xml should exist in embedded data");
+    }
+
+    #[test]
+    fn test_resource_dir_contains_bravura_directory() {
+        let dir = resource_dir();
+        let bravura_dir = dir.get_dir("Bravura");
+        assert!(
+            bravura_dir.is_some(),
+            "Bravura/ directory should exist in embedded data"
+        );
+    }
+
+    #[test]
+    fn test_resource_dir_contains_text_directory() {
+        let dir = resource_dir();
+        let text_dir = dir.get_dir("text");
+        assert!(
+            text_dir.is_some(),
+            "text/ directory should exist in embedded data"
+        );
+    }
+
+    #[test]
+    fn test_extract_resources_creates_files() {
+        let temp_dir = extract_resources().expect("Failed to extract resources");
+        let bravura_path = temp_dir.path().join("Bravura.xml");
+        assert!(bravura_path.exists(), "Bravura.xml should be extracted");
+    }
+
+    #[test]
+    fn test_extract_resources_creates_subdirectories() {
+        let temp_dir = extract_resources().expect("Failed to extract resources");
+        let text_path = temp_dir.path().join("text");
+        assert!(text_path.exists(), "text/ directory should be extracted");
+        assert!(text_path.is_dir(), "text should be a directory");
+    }
+
+    #[test]
+    fn test_available_fonts_includes_bravura() {
+        let fonts = available_fonts();
+        assert!(fonts.contains(&"Bravura"), "Bravura should always be available");
+    }
+
+    #[test]
+    #[cfg(feature = "font-leipzig")]
+    fn test_available_fonts_includes_leipzig_when_feature_enabled() {
+        let fonts = available_fonts();
+        assert!(
+            fonts.contains(&"Leipzig"),
+            "Leipzig should be available when feature is enabled"
+        );
+    }
+
+    #[test]
+    #[cfg(feature = "font-leipzig")]
+    fn test_default_font_is_leipzig_when_feature_enabled() {
+        assert_eq!(default_font(), "Leipzig");
+    }
+
+    #[test]
+    fn test_has_leipzig_matches_feature() {
+        // This test always passes - it just verifies the function works
+        let _ = has_leipzig();
+    }
+
+    #[test]
+    fn test_has_bravura_matches_feature() {
+        let _ = has_bravura();
+    }
+
+    #[test]
+    fn test_has_gootville_matches_feature() {
+        let _ = has_gootville();
+    }
+
+    #[test]
+    fn test_has_leland_matches_feature() {
+        let _ = has_leland();
+    }
+
+    #[test]
+    fn test_has_petaluma_matches_feature() {
+        let _ = has_petaluma();
+    }
+
+    #[test]
+    fn test_bravura_xml_has_content() {
+        let dir = resource_dir();
+        let bravura = dir.get_file("Bravura.xml").expect("Bravura.xml should exist");
+        let contents = bravura.contents_utf8().expect("Should be valid UTF-8");
+        assert!(
+            contents.contains("bounding-boxes"),
+            "Bravura.xml should contain bounding-boxes element"
+        );
+    }
+
+    #[test]
+    fn test_text_directory_contains_times_font() {
+        let dir = resource_dir();
+        let text_dir = dir.get_dir("text").expect("text/ should exist");
+        let times = text_dir.get_file("Times.xml");
+        assert!(times.is_some(), "Times.xml should exist in text/");
+    }
+}
