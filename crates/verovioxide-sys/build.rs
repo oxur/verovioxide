@@ -104,10 +104,10 @@ fn main() {
     for entry in std::fs::read_dir(verovio_dir.join("src")).unwrap() {
         let entry = entry.unwrap();
         let path = entry.path();
-        if path.extension().map_or(false, |ext| ext == "cpp") {
-            if path.file_name().map_or(false, |name| name != "main.cpp") {
-                sources.push(path);
-            }
+        if path.extension().is_some_and(|ext| ext == "cpp")
+            && path.file_name().is_some_and(|name| name != "main.cpp")
+        {
+            sources.push(path);
         }
     }
 
@@ -116,7 +116,7 @@ fn main() {
         for entry in entries {
             let entry = entry.unwrap();
             let path = entry.path();
-            if path.extension().map_or(false, |ext| ext == "cpp") {
+            if path.extension().is_some_and(|ext| ext == "cpp") {
                 sources.push(path);
             }
         }
@@ -126,7 +126,7 @@ fn main() {
     for entry in std::fs::read_dir(verovio_dir.join("src/midi")).unwrap() {
         let entry = entry.unwrap();
         let path = entry.path();
-        if path.extension().map_or(false, |ext| ext == "cpp") {
+        if path.extension().is_some_and(|ext| ext == "cpp") {
             sources.push(path);
         }
     }
@@ -135,7 +135,7 @@ fn main() {
     for entry in std::fs::read_dir(verovio_dir.join("src/crc")).unwrap() {
         let entry = entry.unwrap();
         let path = entry.path();
-        if path.extension().map_or(false, |ext| ext == "cpp") {
+        if path.extension().is_some_and(|ext| ext == "cpp") {
             sources.push(path);
         }
     }
@@ -150,7 +150,7 @@ fn main() {
     for entry in std::fs::read_dir(verovio_dir.join("libmei/dist")).unwrap() {
         let entry = entry.unwrap();
         let path = entry.path();
-        if path.extension().map_or(false, |ext| ext == "cpp") {
+        if path.extension().is_some_and(|ext| ext == "cpp") {
             sources.push(path);
         }
     }
@@ -159,7 +159,7 @@ fn main() {
     for entry in std::fs::read_dir(verovio_dir.join("libmei/addons")).unwrap() {
         let entry = entry.unwrap();
         let path = entry.path();
-        if path.extension().map_or(false, |ext| ext == "cpp") {
+        if path.extension().is_some_and(|ext| ext == "cpp") {
             sources.push(path);
         }
     }
