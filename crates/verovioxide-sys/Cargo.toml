@@ -1,0 +1,14 @@
+[package]
+name = "verovioxide-sys"
+description = "Low-level FFI bindings for the Verovio C++ library"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["mei", "music", "notation", "verovio", "ffi"]
+categories = ["external-ffi-bindings"]
+
+[build-dependencies]
+
+[dependencies]

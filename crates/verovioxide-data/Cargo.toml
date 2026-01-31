@@ -1,0 +1,12 @@
+[package]
+name = "verovioxide-data"
+description = "Data structures and types for Verovio music notation"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["mei", "music", "notation", "verovio"]
+categories = ["data-structures"]
+
+[dependencies]

@@ -255,7 +255,7 @@ push:
 # Crates in dependency order (leaf crates first, dependent crates later)
 # ECL crates: design -> core -> steps -> workflows -> cli -> ecl
 # Fabryk crates: core -> (client, acl, storage) -> query -> api -> (mcp, cli) -> fabryk
-PUBLISH_ORDER := verovioxide
+PUBLISH_ORDER := verovioxide-data verovioxide-sys verovioxide
 # crates.io rate limit delay (seconds)
 PUBLISH_DELAY := 372
 .PHONY: publish

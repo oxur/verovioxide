@@ -1,0 +1,20 @@
+[workspace]
+resolver = "2"
+
+members = [
+    "crates/design",
+    "crates/verovioxide",
+    "crates/verovioxide-data",
+    "crates/verovioxide-sys",
+]
+
+[workspace.package]
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.85"
+license = "Apache-2.0"
+repository = "https://github.com/oxur/verovioxide"
+keywords = ["mei", "music", "notation", "verovio"]
+categories = ["multimedia::encoding", "parsing"]
+
+[workspace.dependencies]

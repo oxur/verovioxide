@@ -1,0 +1,12 @@
+[package]
+name = "verovioxide"
+description = "Rust bindings for the Verovio music notation engraving library"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords = ["mei", "music", "notation", "verovio"]
+categories = ["multimedia::encoding", "parsing"]
+
+[dependencies]
