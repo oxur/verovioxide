@@ -855,4 +855,678 @@ mod tests {
         assert_eq!(original.font, parsed.font);
         assert_eq!(original.breaks, parsed.breaks);
     }
+
+    // =========================================================================
+    // Additional tests for improved coverage
+    // =========================================================================
+
+    #[test]
+    fn test_options_from_json_invalid() {
+        let result = Options::from_json("not valid json");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_options_from_json_empty_object() {
+        let result = Options::from_json("{}");
+        assert!(result.is_ok());
+        let options = result.unwrap();
+        assert!(options.scale.is_none());
+        assert!(options.page_width.is_none());
+    }
+
+    #[test]
+    fn test_options_from_json_unknown_fields() {
+        // serde should ignore unknown fields by default
+        let result = Options::from_json(r#"{"unknownField": "value", "scale": 100}"#);
+        assert!(result.is_ok());
+        let options = result.unwrap();
+        assert_eq!(options.scale, Some(100));
+    }
+
+    #[test]
+    fn test_options_from_json_wrong_type() {
+        let result = Options::from_json(r#"{"scale": "not a number"}"#);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_break_mode_serialize_all_variants() {
+        assert_eq!(
+            serde_json::to_string(&BreakMode::Auto).unwrap(),
+            r#""auto""#
+        );
+        assert_eq!(
+            serde_json::to_string(&BreakMode::None).unwrap(),
+            r#""none""#
+        );
+        assert_eq!(
+            serde_json::to_string(&BreakMode::Encoded).unwrap(),
+            r#""encoded""#
+        );
+        assert_eq!(
+            serde_json::to_string(&BreakMode::Line).unwrap(),
+            r#""line""#
+        );
+        assert_eq!(
+            serde_json::to_string(&BreakMode::Smart).unwrap(),
+            r#""smart""#
+        );
+    }
+
+    #[test]
+    fn test_break_mode_deserialize_all_variants() {
+        let auto: BreakMode = serde_json::from_str(r#""auto""#).unwrap();
+        assert_eq!(auto, BreakMode::Auto);
+
+        let none: BreakMode = serde_json::from_str(r#""none""#).unwrap();
+        assert_eq!(none, BreakMode::None);
+
+        let encoded: BreakMode = serde_json::from_str(r#""encoded""#).unwrap();
+        assert_eq!(encoded, BreakMode::Encoded);
+
+        let line: BreakMode = serde_json::from_str(r#""line""#).unwrap();
+        assert_eq!(line, BreakMode::Line);
+
+        let smart: BreakMode = serde_json::from_str(r#""smart""#).unwrap();
+        assert_eq!(smart, BreakMode::Smart);
+    }
+
+    #[test]
+    fn test_break_mode_default() {
+        let mode = BreakMode::default();
+        assert_eq!(mode, BreakMode::Auto);
+    }
+
+    #[test]
+    fn test_condense_mode_serialize_all_variants() {
+        assert_eq!(
+            serde_json::to_string(&CondenseMode::None).unwrap(),
+            r#""none""#
+        );
+        assert_eq!(
+            serde_json::to_string(&CondenseMode::Auto).unwrap(),
+            r#""auto""#
+        );
+        assert_eq!(
+            serde_json::to_string(&CondenseMode::Encoded).unwrap(),
+            r#""encoded""#
+        );
+    }
+
+    #[test]
+    fn test_condense_mode_deserialize_all_variants() {
+        let none: CondenseMode = serde_json::from_str(r#""none""#).unwrap();
+        assert_eq!(none, CondenseMode::None);
+
+        let auto: CondenseMode = serde_json::from_str(r#""auto""#).unwrap();
+        assert_eq!(auto, CondenseMode::Auto);
+
+        let encoded: CondenseMode = serde_json::from_str(r#""encoded""#).unwrap();
+        assert_eq!(encoded, CondenseMode::Encoded);
+    }
+
+    #[test]
+    fn test_condense_mode_default() {
+        let mode = CondenseMode::default();
+        assert_eq!(mode, CondenseMode::None);
+    }
+
+    #[test]
+    fn test_footer_mode_serialize_all_variants() {
+        assert_eq!(
+            serde_json::to_string(&FooterMode::None).unwrap(),
+            r#""none""#
+        );
+        assert_eq!(
+            serde_json::to_string(&FooterMode::Auto).unwrap(),
+            r#""auto""#
+        );
+        assert_eq!(
+            serde_json::to_string(&FooterMode::Encoded).unwrap(),
+            r#""encoded""#
+        );
+        assert_eq!(
+            serde_json::to_string(&FooterMode::Always).unwrap(),
+            r#""always""#
+        );
+    }
+
+    #[test]
+    fn test_footer_mode_deserialize_all_variants() {
+        let none: FooterMode = serde_json::from_str(r#""none""#).unwrap();
+        assert_eq!(none, FooterMode::None);
+
+        let auto: FooterMode = serde_json::from_str(r#""auto""#).unwrap();
+        assert_eq!(auto, FooterMode::Auto);
+
+        let encoded: FooterMode = serde_json::from_str(r#""encoded""#).unwrap();
+        assert_eq!(encoded, FooterMode::Encoded);
+
+        let always: FooterMode = serde_json::from_str(r#""always""#).unwrap();
+        assert_eq!(always, FooterMode::Always);
+    }
+
+    #[test]
+    fn test_footer_mode_default() {
+        let mode = FooterMode::default();
+        assert_eq!(mode, FooterMode::None);
+    }
+
+    #[test]
+    fn test_header_mode_serialize_all_variants() {
+        assert_eq!(
+            serde_json::to_string(&HeaderMode::None).unwrap(),
+            r#""none""#
+        );
+        assert_eq!(
+            serde_json::to_string(&HeaderMode::Auto).unwrap(),
+            r#""auto""#
+        );
+        assert_eq!(
+            serde_json::to_string(&HeaderMode::Encoded).unwrap(),
+            r#""encoded""#
+        );
+    }
+
+    #[test]
+    fn test_header_mode_deserialize_all_variants() {
+        let none: HeaderMode = serde_json::from_str(r#""none""#).unwrap();
+        assert_eq!(none, HeaderMode::None);
+
+        let auto: HeaderMode = serde_json::from_str(r#""auto""#).unwrap();
+        assert_eq!(auto, HeaderMode::Auto);
+
+        let encoded: HeaderMode = serde_json::from_str(r#""encoded""#).unwrap();
+        assert_eq!(encoded, HeaderMode::Encoded);
+    }
+
+    #[test]
+    fn test_header_mode_default() {
+        let mode = HeaderMode::default();
+        assert_eq!(mode, HeaderMode::None);
+    }
+
+    #[test]
+    fn test_text_font_times() {
+        let font = TextFont::Times;
+        assert_eq!(font.as_str(), "Times");
+    }
+
+    #[test]
+    fn test_text_font_custom_empty() {
+        let font = TextFont::Custom(String::new());
+        assert_eq!(font.as_str(), "");
+    }
+
+    #[test]
+    fn test_text_font_serialize() {
+        let times = TextFont::Times;
+        let json = serde_json::to_string(&times).unwrap();
+        assert_eq!(json, r#""Times""#);
+
+        let custom = TextFont::Custom("Arial".to_string());
+        let json = serde_json::to_string(&custom).unwrap();
+        assert!(json.contains("Arial"));
+    }
+
+    #[test]
+    fn test_text_font_deserialize() {
+        let times: TextFont = serde_json::from_str(r#""Times""#).unwrap();
+        assert_eq!(times, TextFont::Times);
+    }
+
+    #[test]
+    fn test_text_font_clone() {
+        let font = TextFont::Custom("MyFont".to_string());
+        let cloned = font.clone();
+        assert_eq!(font, cloned);
+    }
+
+    #[test]
+    fn test_text_font_debug() {
+        let font = TextFont::Times;
+        let debug = format!("{:?}", font);
+        assert!(debug.contains("Times"));
+
+        let custom = TextFont::Custom("Arial".to_string());
+        let debug = format!("{:?}", custom);
+        assert!(debug.contains("Custom"));
+        assert!(debug.contains("Arial"));
+    }
+
+    #[test]
+    fn test_options_builder_lyric_size() {
+        let options = Options::builder().lyric_size(0.8).build();
+        assert_eq!(options.lyric_size, Some(0.8));
+    }
+
+    #[test]
+    fn test_options_builder_condense() {
+        let options = Options::builder().condense(CondenseMode::Auto).build();
+        assert_eq!(options.condense, Some(CondenseMode::Auto));
+    }
+
+    #[test]
+    fn test_options_builder_condense_first_page() {
+        let options = Options::builder().condense_first_page(true).build();
+        assert_eq!(options.condense_first_page, Some(true));
+    }
+
+    #[test]
+    fn test_options_builder_condense_tempo_pages() {
+        let options = Options::builder().condense_tempo_pages(false).build();
+        assert_eq!(options.condense_tempo_pages, Some(false));
+    }
+
+    #[test]
+    fn test_options_builder_even_note_spacing() {
+        let options = Options::builder().even_note_spacing(true).build();
+        assert_eq!(options.even_note_spacing, Some(true));
+    }
+
+    #[test]
+    fn test_options_builder_min_measure_width() {
+        let options = Options::builder().min_measure_width(150).build();
+        assert_eq!(options.min_measure_width, Some(150));
+    }
+
+    #[test]
+    fn test_options_builder_input_from() {
+        let options = Options::builder().input_from("musicxml").build();
+        assert_eq!(options.input_from, Some("musicxml".to_string()));
+    }
+
+    #[test]
+    fn test_options_builder_mdiv_x_path_query() {
+        let options = Options::builder()
+            .mdiv_x_path_query("/score/mdiv[1]")
+            .build();
+        assert_eq!(
+            options.mdiv_x_path_query,
+            Some("/score/mdiv[1]".to_string())
+        );
+    }
+
+    #[test]
+    fn test_options_builder_expansion() {
+        let options = Options::builder().expansion("expanded").build();
+        assert_eq!(options.expansion, Some("expanded".to_string()));
+    }
+
+    #[test]
+    fn test_options_clone() {
+        let original = Options::builder().scale(80).font("Leipzig").build();
+        let cloned = original.clone();
+        assert_eq!(original.scale, cloned.scale);
+        assert_eq!(original.font, cloned.font);
+    }
+
+    #[test]
+    fn test_options_debug() {
+        let options = Options::builder().scale(100).build();
+        let debug = format!("{:?}", options);
+        assert!(debug.contains("Options"));
+        assert!(debug.contains("scale"));
+        assert!(debug.contains("100"));
+    }
+
+    #[test]
+    fn test_options_builder_clone() {
+        let builder = Options::builder().scale(80);
+        let cloned = builder.clone();
+        let options1 = builder.page_width(2100).build();
+        let options2 = cloned.page_height(2970).build();
+
+        assert_eq!(options1.scale, Some(80));
+        assert_eq!(options1.page_width, Some(2100));
+        assert!(options1.page_height.is_none());
+
+        assert_eq!(options2.scale, Some(80));
+        assert!(options2.page_width.is_none());
+        assert_eq!(options2.page_height, Some(2970));
+    }
+
+    #[test]
+    fn test_options_builder_debug() {
+        let builder = Options::builder().scale(100);
+        let debug = format!("{:?}", builder);
+        assert!(debug.contains("OptionsBuilder"));
+    }
+
+    #[test]
+    fn test_options_builder_default() {
+        let builder = OptionsBuilder::default();
+        let options = builder.build();
+        assert!(options.scale.is_none());
+    }
+
+    #[test]
+    fn test_options_all_fields_in_json() {
+        let options = Options::builder()
+            .scale(80)
+            .page_width(2100)
+            .page_height(2970)
+            .adjust_page_height(true)
+            .page_margin(50)
+            .page_margin_top(100)
+            .page_margin_bottom(100)
+            .page_margin_left(75)
+            .page_margin_right(75)
+            .font("Leipzig")
+            .lyric_size(0.8)
+            .breaks(BreakMode::Smart)
+            .condense(CondenseMode::Auto)
+            .condense_first_page(true)
+            .condense_tempo_pages(false)
+            .even_note_spacing(true)
+            .min_measure_width(150)
+            .header(HeaderMode::Auto)
+            .footer(FooterMode::Always)
+            .svg_xml_declaration(true)
+            .svg_bounding_boxes(false)
+            .svg_view_box(true)
+            .svg_remove_xlink(false)
+            .svg_css("svg { background: white; }")
+            .svg_format_raw(true)
+            .svg_font_face_include(false)
+            .midi_tempo(120.0)
+            .midi_velocity(80)
+            .input_from("mei")
+            .mdiv_x_path_query("/score")
+            .expansion("expanded")
+            .transpose("M2")
+            .transpose_selected_only(true)
+            .transpose_to_sounding_pitch(false)
+            .spacing_staff(12)
+            .spacing_system(6)
+            .spacing_linear(0.25)
+            .spacing_non_linear(0.6)
+            .build();
+
+        let json = options.to_json().unwrap();
+
+        // Verify camelCase conversion
+        assert!(json.contains("pageWidth"));
+        assert!(json.contains("pageHeight"));
+        assert!(json.contains("adjustPageHeight"));
+        assert!(json.contains("pageMargin"));
+        assert!(json.contains("pageMarginTop"));
+        assert!(json.contains("lyricSize"));
+        assert!(json.contains("condenseFirstPage"));
+        assert!(json.contains("evenNoteSpacing"));
+        assert!(json.contains("minMeasureWidth"));
+        assert!(json.contains("svgXmlDeclaration"));
+        assert!(json.contains("svgBoundingBoxes"));
+        assert!(json.contains("svgViewBox"));
+        assert!(json.contains("svgRemoveXlink"));
+        assert!(json.contains("svgCss"));
+        assert!(json.contains("svgFormatRaw"));
+        assert!(json.contains("svgFontFaceInclude"));
+        assert!(json.contains("midiTempo"));
+        assert!(json.contains("midiVelocity"));
+        assert!(json.contains("inputFrom"));
+        assert!(json.contains("mdivXPathQuery"));
+        assert!(json.contains("transposeSelectedOnly"));
+        assert!(json.contains("transposeToSoundingPitch"));
+        assert!(json.contains("spacingStaff"));
+        assert!(json.contains("spacingSystem"));
+        assert!(json.contains("spacingLinear"));
+        assert!(json.contains("spacingNonLinear"));
+    }
+
+    #[test]
+    fn test_options_round_trip_all_fields() {
+        let original = Options::builder()
+            .scale(80)
+            .page_width(2100)
+            .page_height(2970)
+            .adjust_page_height(true)
+            .page_margin(50)
+            .lyric_size(0.8)
+            .breaks(BreakMode::Encoded)
+            .condense(CondenseMode::Encoded)
+            .header(HeaderMode::Encoded)
+            .footer(FooterMode::Encoded)
+            .midi_tempo(120.0)
+            .midi_velocity(80)
+            .spacing_linear(0.25)
+            .spacing_non_linear(0.6)
+            .build();
+
+        let json = original.to_json().unwrap();
+        let parsed = Options::from_json(&json).unwrap();
+
+        assert_eq!(original.scale, parsed.scale);
+        assert_eq!(original.page_width, parsed.page_width);
+        assert_eq!(original.page_height, parsed.page_height);
+        assert_eq!(original.adjust_page_height, parsed.adjust_page_height);
+        assert_eq!(original.page_margin, parsed.page_margin);
+        assert_eq!(original.lyric_size, parsed.lyric_size);
+        assert_eq!(original.breaks, parsed.breaks);
+        assert_eq!(original.condense, parsed.condense);
+        assert_eq!(original.header, parsed.header);
+        assert_eq!(original.footer, parsed.footer);
+        assert_eq!(original.midi_tempo, parsed.midi_tempo);
+        assert_eq!(original.midi_velocity, parsed.midi_velocity);
+        assert_eq!(original.spacing_linear, parsed.spacing_linear);
+        assert_eq!(original.spacing_non_linear, parsed.spacing_non_linear);
+    }
+
+    #[test]
+    fn test_break_mode_clone() {
+        let mode = BreakMode::Smart;
+        let cloned = mode.clone();
+        assert_eq!(mode, cloned);
+    }
+
+    #[test]
+    fn test_break_mode_copy() {
+        let mode = BreakMode::Line;
+        let copied = mode;
+        assert_eq!(mode, copied);
+    }
+
+    #[test]
+    fn test_break_mode_debug() {
+        let mode = BreakMode::Encoded;
+        let debug = format!("{:?}", mode);
+        assert!(debug.contains("Encoded"));
+    }
+
+    #[test]
+    fn test_condense_mode_clone() {
+        let mode = CondenseMode::Auto;
+        let cloned = mode.clone();
+        assert_eq!(mode, cloned);
+    }
+
+    #[test]
+    fn test_condense_mode_copy() {
+        let mode = CondenseMode::Encoded;
+        let copied = mode;
+        assert_eq!(mode, copied);
+    }
+
+    #[test]
+    fn test_condense_mode_debug() {
+        let mode = CondenseMode::Auto;
+        let debug = format!("{:?}", mode);
+        assert!(debug.contains("Auto"));
+    }
+
+    #[test]
+    fn test_footer_mode_clone() {
+        let mode = FooterMode::Always;
+        let cloned = mode.clone();
+        assert_eq!(mode, cloned);
+    }
+
+    #[test]
+    fn test_footer_mode_copy() {
+        let mode = FooterMode::Auto;
+        let copied = mode;
+        assert_eq!(mode, copied);
+    }
+
+    #[test]
+    fn test_footer_mode_debug() {
+        let mode = FooterMode::Encoded;
+        let debug = format!("{:?}", mode);
+        assert!(debug.contains("Encoded"));
+    }
+
+    #[test]
+    fn test_header_mode_clone() {
+        let mode = HeaderMode::Auto;
+        let cloned = mode.clone();
+        assert_eq!(mode, cloned);
+    }
+
+    #[test]
+    fn test_header_mode_copy() {
+        let mode = HeaderMode::Encoded;
+        let copied = mode;
+        assert_eq!(mode, copied);
+    }
+
+    #[test]
+    fn test_header_mode_debug() {
+        let mode = HeaderMode::None;
+        let debug = format!("{:?}", mode);
+        assert!(debug.contains("None"));
+    }
+
+    #[test]
+    fn test_options_json_with_enums() {
+        let options = Options::builder()
+            .breaks(BreakMode::None)
+            .condense(CondenseMode::None)
+            .header(HeaderMode::None)
+            .footer(FooterMode::None)
+            .build();
+
+        let json = options.to_json().unwrap();
+        assert!(json.contains(r#""breaks":"none""#));
+        assert!(json.contains(r#""condense":"none""#));
+        assert!(json.contains(r#""header":"none""#));
+        assert!(json.contains(r#""footer":"none""#));
+    }
+
+    #[test]
+    fn test_options_empty_json() {
+        let options = Options::default();
+        let json = options.to_json().unwrap();
+        assert_eq!(json, "{}");
+    }
+
+    #[test]
+    fn test_options_partial_json_deserialization() {
+        // Test that we can deserialize JSON with only some fields set
+        let json = r#"{"scale":100,"breaks":"smart"}"#;
+        let options = Options::from_json(json).unwrap();
+        assert_eq!(options.scale, Some(100));
+        assert_eq!(options.breaks, Some(BreakMode::Smart));
+        assert!(options.page_width.is_none());
+        assert!(options.font.is_none());
+    }
+
+    #[test]
+    fn test_break_mode_invalid_deserialize() {
+        let result: std::result::Result<BreakMode, _> = serde_json::from_str(r#""invalid_mode""#);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_condense_mode_invalid_deserialize() {
+        let result: std::result::Result<CondenseMode, _> =
+            serde_json::from_str(r#""invalid_mode""#);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_header_mode_invalid_deserialize() {
+        let result: std::result::Result<HeaderMode, _> = serde_json::from_str(r#""invalid_mode""#);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_footer_mode_invalid_deserialize() {
+        let result: std::result::Result<FooterMode, _> = serde_json::from_str(r#""invalid_mode""#);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_options_builder_string_methods_with_string() {
+        // Test that methods accepting impl Into<String> work with String
+        let options = Options::builder()
+            .font(String::from("Bravura"))
+            .svg_css(String::from("svg {}"))
+            .input_from(String::from("humdrum"))
+            .mdiv_x_path_query(String::from("/"))
+            .expansion(String::from("exp"))
+            .transpose(String::from("P5"))
+            .build();
+
+        assert_eq!(options.font, Some("Bravura".to_string()));
+        assert_eq!(options.svg_css, Some("svg {}".to_string()));
+        assert_eq!(options.input_from, Some("humdrum".to_string()));
+        assert_eq!(options.mdiv_x_path_query, Some("/".to_string()));
+        assert_eq!(options.expansion, Some("exp".to_string()));
+        assert_eq!(options.transpose, Some("P5".to_string()));
+    }
+
+    #[test]
+    fn test_options_lyric_size_edge_values() {
+        // Test with edge values for lyric size
+        let options1 = Options::builder().lyric_size(0.0).build();
+        assert_eq!(options1.lyric_size, Some(0.0));
+
+        let options2 = Options::builder().lyric_size(1.0).build();
+        assert_eq!(options2.lyric_size, Some(1.0));
+
+        let options3 = Options::builder().lyric_size(2.5).build();
+        assert_eq!(options3.lyric_size, Some(2.5));
+    }
+
+    #[test]
+    fn test_options_midi_velocity_edge_values() {
+        let options1 = Options::builder().midi_velocity(0).build();
+        assert_eq!(options1.midi_velocity, Some(0));
+
+        let options2 = Options::builder().midi_velocity(127).build();
+        assert_eq!(options2.midi_velocity, Some(127));
+
+        let options3 = Options::builder().midi_velocity(255).build();
+        assert_eq!(options3.midi_velocity, Some(255));
+    }
+
+    #[test]
+    fn test_options_scale_edge_values() {
+        let options1 = Options::builder().scale(1).build();
+        assert_eq!(options1.scale, Some(1));
+
+        let options2 = Options::builder().scale(100).build();
+        assert_eq!(options2.scale, Some(100));
+
+        let options3 = Options::builder().scale(1000).build();
+        assert_eq!(options3.scale, Some(1000));
+    }
+
+    #[test]
+    fn test_options_spacing_factors_edge_values() {
+        let options = Options::builder()
+            .spacing_linear(0.0)
+            .spacing_non_linear(0.0)
+            .build();
+        assert_eq!(options.spacing_linear, Some(0.0));
+        assert_eq!(options.spacing_non_linear, Some(0.0));
+
+        let options2 = Options::builder()
+            .spacing_linear(1.0)
+            .spacing_non_linear(1.0)
+            .build();
+        assert_eq!(options2.spacing_linear, Some(1.0));
+        assert_eq!(options2.spacing_non_linear, Some(1.0));
+    }
 }

@@ -658,7 +658,11 @@ impl Toolkit {
     ///
     /// Returns an error if no document is loaded or rendering fails.
     pub fn render_to_midi(&self) -> Result<String> {
-        // SAFETY: ptr is valid
+        if self.page_count() == 0 {
+            return Err(Error::RenderError("no data loaded".into()));
+        }
+
+        // SAFETY: ptr is valid, data is loaded
         let midi_ptr = unsafe { verovioxide_sys::vrvToolkit_renderToMIDI(self.ptr) };
 
         self.ptr_to_string(midi_ptr)
@@ -671,7 +675,11 @@ impl Toolkit {
     ///
     /// Returns an error if no document is loaded or rendering fails.
     pub fn render_to_pae(&self) -> Result<String> {
-        // SAFETY: ptr is valid
+        if self.page_count() == 0 {
+            return Err(Error::RenderError("no data loaded".into()));
+        }
+
+        // SAFETY: ptr is valid, data is loaded
         let pae_ptr = unsafe { verovioxide_sys::vrvToolkit_renderToPAE(self.ptr) };
 
         self.ptr_to_string(pae_ptr)
@@ -1314,5 +1322,784 @@ mod tests {
 
         let svg = toolkit.render_to_svg(1).expect("Failed to render SVG");
         assert!(svg.contains("<svg"));
+    }
+
+    // =========================================================================
+    // Additional tests for improved coverage
+    // =========================================================================
+
+    #[test]
+    fn test_toolkit_render_to_svg_with_declaration_page_zero() {
+        let toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.render_to_svg_with_declaration(0);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("out of range"));
+    }
+
+    #[test]
+    fn test_toolkit_render_to_svg_with_declaration_no_data() {
+        let toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.render_to_svg_with_declaration(1);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_toolkit_get_mei_no_data() {
+        let toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.get_mei();
+        // With no data loaded, this may return an empty MEI or error depending on Verovio
+        // Just ensure it doesn't panic and returns a result
+        let _ = result;
+    }
+
+    #[test]
+    fn test_toolkit_get_mei_with_options_no_data() {
+        let toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.get_mei_with_options(r#"{"removeIds": true}"#);
+        // May succeed with empty result or error - just ensure no panic
+        let _ = result;
+    }
+
+    #[test]
+    fn test_toolkit_get_humdrum_no_data() {
+        let toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.get_humdrum();
+        // May return empty or error - just ensure no panic
+        let _ = result;
+    }
+
+    #[test]
+    fn test_toolkit_render_to_midi_no_data() {
+        let toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.render_to_midi();
+        assert!(result.is_err(), "render_to_midi should fail without data");
+        let err = result.unwrap_err();
+        assert!(
+            err.to_string().contains("no data loaded"),
+            "Error should mention no data loaded"
+        );
+    }
+
+    #[test]
+    fn test_toolkit_render_to_pae_no_data() {
+        let toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.render_to_pae();
+        assert!(result.is_err(), "render_to_pae should fail without data");
+        let err = result.unwrap_err();
+        assert!(
+            err.to_string().contains("no data loaded"),
+            "Error should mention no data loaded"
+        );
+    }
+
+    #[test]
+    fn test_toolkit_render_to_timemap_no_data() {
+        let toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.render_to_timemap();
+        // Returns JSON array (possibly empty) or error
+        let _ = result;
+    }
+
+    #[test]
+    fn test_toolkit_render_to_timemap_with_options_no_data() {
+        let toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.render_to_timemap_with_options(r#"{"includeMeasures": true}"#);
+        let _ = result;
+    }
+
+    #[test]
+    fn test_toolkit_render_to_expansion_map_no_data() {
+        let toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.render_to_expansion_map();
+        let _ = result;
+    }
+
+    #[test]
+    fn test_toolkit_set_scale_invalid() {
+        let mut toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        // Scale of 0 should be invalid
+        let result = toolkit.set_scale(0);
+        // Verovio may accept or reject this - test that we handle the result
+        let _ = result;
+    }
+
+    #[test]
+    fn test_toolkit_set_scale_negative() {
+        let mut toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.set_scale(-1);
+        // Verovio may accept or reject this - test that we handle the result
+        let _ = result;
+    }
+
+    #[test]
+    fn test_toolkit_set_scale_large() {
+        let mut toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        // Very large scale
+        let result = toolkit.set_scale(10000);
+        let _ = result;
+    }
+
+    #[test]
+    fn test_toolkit_get_resource_path() {
+        let toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let path = toolkit.get_resource_path();
+        // Without resources, path may be empty
+        let _ = path;
+    }
+
+    #[test]
+    fn test_toolkit_set_resource_path_nonexistent() {
+        let mut toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.set_resource_path(Path::new("/nonexistent/path/to/resources"));
+        // This may succeed (just sets the path) or fail depending on implementation
+        let _ = result;
+    }
+
+    #[test]
+    fn test_toolkit_get_page_with_element_not_found() {
+        let toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.get_page_with_element("nonexistent-id");
+        // Should return 0 when element not found
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 0);
+    }
+
+    #[test]
+    fn test_toolkit_get_element_attr_not_found() {
+        let toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.get_element_attr("nonexistent-id");
+        // May return empty JSON or error
+        let _ = result;
+    }
+
+    #[test]
+    fn test_toolkit_get_elements_at_time_no_data() {
+        let toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.get_elements_at_time(0);
+        // May return empty array or error
+        let _ = result;
+    }
+
+    #[test]
+    fn test_toolkit_get_elements_at_time_negative() {
+        let toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.get_elements_at_time(-1000);
+        let _ = result;
+    }
+
+    #[test]
+    fn test_toolkit_get_time_for_element_not_found() {
+        let toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.get_time_for_element("nonexistent-id");
+        assert!(result.is_ok());
+        // Time may be 0 or negative when not found
+    }
+
+    #[test]
+    fn test_toolkit_redo_layout_no_data() {
+        let mut toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.redo_layout(None);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_toolkit_redo_layout_with_options() {
+        let mut toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.redo_layout(Some(r#"{"pageWidth": 2100}"#));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_toolkit_edit_no_data() {
+        let mut toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.edit(r#"{"action": "commit"}"#);
+        // Edit without data may fail
+        let _ = result;
+    }
+
+    #[test]
+    fn test_toolkit_edit_invalid_json() {
+        let mut toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.edit("not valid json");
+        // Should handle invalid JSON gracefully
+        let _ = result;
+    }
+
+    #[test]
+    fn test_toolkit_edit_info() {
+        let toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let info = toolkit.edit_info();
+        // Should return JSON (possibly empty object)
+        let _ = info;
+    }
+
+    #[test]
+    fn test_toolkit_load_data_with_null_byte() {
+        let mut toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.load_data("test\0data");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("null byte"));
+    }
+
+    #[test]
+    fn test_toolkit_load_data_malformed_mei() {
+        let mut toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.load_data("<mei><invalid></mei>");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_toolkit_load_data_random_text() {
+        let mut toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.load_data("This is just random text, not valid music notation");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_toolkit_get_mei_with_options_null_byte() {
+        let toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.get_mei_with_options("test\0options");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("null byte"));
+    }
+
+    #[test]
+    fn test_toolkit_render_to_timemap_with_options_null_byte() {
+        let toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.render_to_timemap_with_options("test\0options");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("null byte"));
+    }
+
+    #[test]
+    fn test_toolkit_get_page_with_element_null_byte() {
+        let toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.get_page_with_element("test\0id");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("null byte"));
+    }
+
+    #[test]
+    fn test_toolkit_get_element_attr_null_byte() {
+        let toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.get_element_attr("test\0id");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("null byte"));
+    }
+
+    #[test]
+    fn test_toolkit_get_time_for_element_null_byte() {
+        let toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.get_time_for_element("test\0id");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("null byte"));
+    }
+
+    #[test]
+    fn test_toolkit_redo_layout_null_byte() {
+        let mut toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.redo_layout(Some("test\0options"));
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("null byte"));
+    }
+
+    #[test]
+    fn test_toolkit_edit_null_byte() {
+        let mut toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.edit("test\0action");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("null byte"));
+    }
+
+    #[test]
+    fn test_toolkit_set_options_null_byte_in_font() {
+        let mut toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        // Create options with a null byte in a string field
+        let mut options = Options::builder().build();
+        options.font = Some("test\0font".to_string());
+        let result = toolkit.set_options(&options);
+        // The JSON serialization should succeed, but CString creation may fail
+        // or the toolkit may reject it
+        let _ = result;
+    }
+
+    #[test]
+    fn test_toolkit_render_all_pages_no_data() {
+        let toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.render_all_pages();
+        // With no data, page_count is 0, so we get empty vec
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_empty());
+    }
+
+    #[cfg(feature = "bundled-data")]
+    #[test]
+    fn test_toolkit_render_to_svg_with_declaration() {
+        let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+
+        let mei = r#"<?xml version="1.0" encoding="UTF-8"?>
+<mei xmlns="http://www.music-encoding.org/ns/mei">
+  <music>
+    <body>
+      <mdiv>
+        <score>
+          <scoreDef>
+            <staffGrp>
+              <staffDef n="1" lines="5" clef.shape="G" clef.line="2"/>
+            </staffGrp>
+          </scoreDef>
+          <section>
+            <measure>
+              <staff n="1">
+                <layer n="1">
+                  <note pname="c" oct="4" dur="4"/>
+                </layer>
+              </staff>
+            </measure>
+          </section>
+        </score>
+      </mdiv>
+    </body>
+  </music>
+</mei>"#;
+
+        toolkit.load_data(mei).expect("Failed to load MEI");
+
+        let svg = toolkit
+            .render_to_svg_with_declaration(1)
+            .expect("Failed to render SVG");
+        assert!(svg.contains("<?xml"));
+        assert!(svg.contains("<svg"));
+    }
+
+    #[cfg(feature = "bundled-data")]
+    #[test]
+    fn test_toolkit_render_to_midi() {
+        let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+
+        let mei = r#"<?xml version="1.0" encoding="UTF-8"?>
+<mei xmlns="http://www.music-encoding.org/ns/mei">
+  <music>
+    <body>
+      <mdiv>
+        <score>
+          <scoreDef>
+            <staffGrp>
+              <staffDef n="1" lines="5" clef.shape="G" clef.line="2"/>
+            </staffGrp>
+          </scoreDef>
+          <section>
+            <measure>
+              <staff n="1">
+                <layer n="1">
+                  <note pname="c" oct="4" dur="4"/>
+                </layer>
+              </staff>
+            </measure>
+          </section>
+        </score>
+      </mdiv>
+    </body>
+  </music>
+</mei>"#;
+
+        toolkit.load_data(mei).expect("Failed to load MEI");
+
+        let result = toolkit.render_to_midi();
+        // MIDI rendering should succeed with valid MEI
+        assert!(result.is_ok());
+        let midi = result.unwrap();
+        // MIDI is base64-encoded
+        assert!(!midi.is_empty());
+    }
+
+    #[cfg(feature = "bundled-data")]
+    #[test]
+    fn test_toolkit_get_mei_with_options() {
+        let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+
+        let mei = r#"<?xml version="1.0" encoding="UTF-8"?>
+<mei xmlns="http://www.music-encoding.org/ns/mei">
+  <music>
+    <body>
+      <mdiv>
+        <score>
+          <scoreDef>
+            <staffGrp>
+              <staffDef n="1" lines="5" clef.shape="G" clef.line="2"/>
+            </staffGrp>
+          </scoreDef>
+          <section>
+            <measure>
+              <staff n="1">
+                <layer n="1">
+                  <note pname="c" oct="4" dur="4"/>
+                </layer>
+              </staff>
+            </measure>
+          </section>
+        </score>
+      </mdiv>
+    </body>
+  </music>
+</mei>"#;
+
+        toolkit.load_data(mei).expect("Failed to load MEI");
+
+        let result = toolkit.get_mei_with_options(r#"{"removeIds": false}"#);
+        assert!(result.is_ok());
+        let exported = result.unwrap();
+        assert!(exported.contains("mei"));
+    }
+
+    #[cfg(feature = "bundled-data")]
+    #[test]
+    fn test_toolkit_render_to_timemap() {
+        let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+
+        let mei = r#"<?xml version="1.0" encoding="UTF-8"?>
+<mei xmlns="http://www.music-encoding.org/ns/mei">
+  <music>
+    <body>
+      <mdiv>
+        <score>
+          <scoreDef>
+            <staffGrp>
+              <staffDef n="1" lines="5" clef.shape="G" clef.line="2"/>
+            </staffGrp>
+          </scoreDef>
+          <section>
+            <measure>
+              <staff n="1">
+                <layer n="1">
+                  <note pname="c" oct="4" dur="4"/>
+                </layer>
+              </staff>
+            </measure>
+          </section>
+        </score>
+      </mdiv>
+    </body>
+  </music>
+</mei>"#;
+
+        toolkit.load_data(mei).expect("Failed to load MEI");
+
+        let result = toolkit.render_to_timemap();
+        assert!(result.is_ok());
+        let timemap = result.unwrap();
+        // Timemap is JSON
+        assert!(timemap.starts_with('[') || timemap.starts_with('{'));
+    }
+
+    #[cfg(feature = "bundled-data")]
+    #[test]
+    fn test_toolkit_render_to_expansion_map() {
+        let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+
+        let mei = r#"<?xml version="1.0" encoding="UTF-8"?>
+<mei xmlns="http://www.music-encoding.org/ns/mei">
+  <music>
+    <body>
+      <mdiv>
+        <score>
+          <scoreDef>
+            <staffGrp>
+              <staffDef n="1" lines="5" clef.shape="G" clef.line="2"/>
+            </staffGrp>
+          </scoreDef>
+          <section>
+            <measure>
+              <staff n="1">
+                <layer n="1">
+                  <note pname="c" oct="4" dur="4"/>
+                </layer>
+              </staff>
+            </measure>
+          </section>
+        </score>
+      </mdiv>
+    </body>
+  </music>
+</mei>"#;
+
+        toolkit.load_data(mei).expect("Failed to load MEI");
+
+        let result = toolkit.render_to_expansion_map();
+        assert!(result.is_ok());
+    }
+
+    #[cfg(feature = "bundled-data")]
+    #[test]
+    fn test_toolkit_redo_layout_after_load() {
+        let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+
+        let mei = r#"<?xml version="1.0" encoding="UTF-8"?>
+<mei xmlns="http://www.music-encoding.org/ns/mei">
+  <music>
+    <body>
+      <mdiv>
+        <score>
+          <scoreDef>
+            <staffGrp>
+              <staffDef n="1" lines="5" clef.shape="G" clef.line="2"/>
+            </staffGrp>
+          </scoreDef>
+          <section>
+            <measure>
+              <staff n="1">
+                <layer n="1">
+                  <note pname="c" oct="4" dur="4"/>
+                </layer>
+              </staff>
+            </measure>
+          </section>
+        </score>
+      </mdiv>
+    </body>
+  </music>
+</mei>"#;
+
+        toolkit.load_data(mei).expect("Failed to load MEI");
+
+        // Redo layout with different options
+        let result = toolkit.redo_layout(Some(r#"{"pageWidth": 1500}"#));
+        assert!(result.is_ok());
+
+        // Should still be able to render
+        let svg = toolkit
+            .render_to_svg(1)
+            .expect("Failed to render after redo");
+        assert!(svg.contains("<svg"));
+    }
+
+    #[cfg(feature = "bundled-data")]
+    #[test]
+    fn test_toolkit_set_and_get_resource_path() {
+        let toolkit = Toolkit::new().expect("Failed to create toolkit");
+        let path = toolkit.get_resource_path();
+        // With bundled data, resource path should not be empty
+        assert!(!path.is_empty());
+    }
+
+    #[cfg(feature = "bundled-data")]
+    #[test]
+    fn test_toolkit_get_elements_at_time_with_data() {
+        let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+
+        let mei = r#"<?xml version="1.0" encoding="UTF-8"?>
+<mei xmlns="http://www.music-encoding.org/ns/mei">
+  <music>
+    <body>
+      <mdiv>
+        <score>
+          <scoreDef>
+            <staffGrp>
+              <staffDef n="1" lines="5" clef.shape="G" clef.line="2"/>
+            </staffGrp>
+          </scoreDef>
+          <section>
+            <measure>
+              <staff n="1">
+                <layer n="1">
+                  <note pname="c" oct="4" dur="4"/>
+                </layer>
+              </staff>
+            </measure>
+          </section>
+        </score>
+      </mdiv>
+    </body>
+  </music>
+</mei>"#;
+
+        toolkit.load_data(mei).expect("Failed to load MEI");
+
+        let result = toolkit.get_elements_at_time(0);
+        assert!(result.is_ok());
+        let elements = result.unwrap();
+        // Should be valid JSON
+        assert!(elements.starts_with('{') || elements.starts_with('['));
+    }
+
+    #[test]
+    fn test_toolkit_with_resource_path_nonexistent() {
+        let result = Toolkit::with_resource_path(Path::new("/nonexistent/resources"));
+        // May fail or succeed depending on whether Verovio validates the path
+        let _ = result;
+    }
+
+    #[cfg(feature = "bundled-data")]
+    #[test]
+    fn test_toolkit_load_file_with_tempfile() {
+        use std::io::Write;
+
+        let mut toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+
+        // Create a temp file with invalid content
+        let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+        let file_path = temp_dir.path().join("test.mei");
+        let mut file = std::fs::File::create(&file_path).expect("Failed to create file");
+        file.write_all(b"<invalid>not valid mei</invalid>")
+            .expect("Failed to write");
+
+        let result = toolkit.load_file(&file_path);
+        // Should fail to load invalid MEI
+        assert!(result.is_err());
+    }
+
+    #[cfg(feature = "bundled-data")]
+    #[test]
+    fn test_toolkit_load_file_with_valid_mei() {
+        use std::io::Write;
+
+        let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+
+        let mei = r#"<?xml version="1.0" encoding="UTF-8"?>
+<mei xmlns="http://www.music-encoding.org/ns/mei">
+  <music>
+    <body>
+      <mdiv>
+        <score>
+          <scoreDef>
+            <staffGrp>
+              <staffDef n="1" lines="5" clef.shape="G" clef.line="2"/>
+            </staffGrp>
+          </scoreDef>
+          <section>
+            <measure>
+              <staff n="1">
+                <layer n="1">
+                  <note pname="c" oct="4" dur="4"/>
+                </layer>
+              </staff>
+            </measure>
+          </section>
+        </score>
+      </mdiv>
+    </body>
+  </music>
+</mei>"#;
+
+        let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+        let file_path = temp_dir.path().join("test.mei");
+        let mut file = std::fs::File::create(&file_path).expect("Failed to create file");
+        file.write_all(mei.as_bytes()).expect("Failed to write");
+
+        let result = toolkit.load_file(&file_path);
+        assert!(result.is_ok());
+        assert!(toolkit.page_count() > 0);
+    }
+
+    #[test]
+    fn test_toolkit_not_sync() {
+        // This is a compile-time check - Toolkit should NOT implement Sync
+        // We can't easily test this at runtime, but we document it here
+        // fn assert_sync<T: Sync>() {}
+        // assert_sync::<Toolkit>(); // This would fail to compile
+    }
+
+    #[test]
+    fn test_toolkit_debug_format_detailed() {
+        let toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let debug = format!("{:?}", toolkit);
+        assert!(debug.contains("Toolkit"));
+        assert!(debug.contains("version"));
+        assert!(debug.contains("page_count"));
+        assert!(debug.contains("resource_path"));
+    }
+
+    #[test]
+    fn test_toolkit_enable_log_toggle() {
+        // Test toggling log on and off multiple times
+        Toolkit::enable_log(true);
+        Toolkit::enable_log(true);
+        Toolkit::enable_log(false);
+        Toolkit::enable_log(false);
+        Toolkit::enable_log(true);
+        Toolkit::enable_log(false);
+    }
+
+    #[test]
+    fn test_toolkit_enable_log_to_buffer_toggle() {
+        // Test toggling buffer log on and off multiple times
+        Toolkit::enable_log_to_buffer(true);
+        Toolkit::enable_log_to_buffer(true);
+        Toolkit::enable_log_to_buffer(false);
+        Toolkit::enable_log_to_buffer(false);
+        Toolkit::enable_log_to_buffer(true);
+        Toolkit::enable_log_to_buffer(false);
+    }
+
+    #[cfg(feature = "bundled-data")]
+    #[test]
+    fn test_toolkit_logging_with_data() {
+        Toolkit::enable_log_to_buffer(true);
+
+        let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+
+        // Load some data to generate log messages
+        let mei = r#"<?xml version="1.0" encoding="UTF-8"?>
+<mei xmlns="http://www.music-encoding.org/ns/mei">
+  <music>
+    <body>
+      <mdiv>
+        <score>
+          <scoreDef>
+            <staffGrp>
+              <staffDef n="1" lines="5" clef.shape="G" clef.line="2"/>
+            </staffGrp>
+          </scoreDef>
+          <section>
+            <measure>
+              <staff n="1">
+                <layer n="1">
+                  <note pname="c" oct="4" dur="4"/>
+                </layer>
+              </staff>
+            </measure>
+          </section>
+        </score>
+      </mdiv>
+    </body>
+  </music>
+</mei>"#;
+
+        toolkit.load_data(mei).expect("Failed to load MEI");
+
+        let log = toolkit.get_log();
+        // Log may or may not have content depending on Verovio's behavior
+        let _ = log;
+
+        Toolkit::enable_log_to_buffer(false);
+    }
+
+    #[test]
+    fn test_toolkit_render_to_svg_page_exceeds_count() {
+        let toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        // With no data, page_count is 0, so page 1 should be out of range
+        let result = toolkit.render_to_svg(1);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("out of range"));
+        assert!(err.to_string().contains("0 pages"));
+    }
+
+    #[test]
+    fn test_toolkit_render_to_svg_with_declaration_page_exceeds_count() {
+        let toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.render_to_svg_with_declaration(100);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("out of range"));
     }
 }
