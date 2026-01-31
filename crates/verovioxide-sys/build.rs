@@ -2,9 +2,142 @@
 //!
 //! This script compiles the Verovio C++ library from source using the `cc` crate.
 //! It handles platform-specific configuration and links the appropriate C++ standard library.
+//!
+//! # Smart Caching
+//!
+//! To avoid recompiling Verovio (~6 minutes) on every Rust code change, this script
+//! implements smart caching:
+//!
+//! - The compiled library is cached at `target/verovio-cache/libverovio.a`
+//! - Subsequent builds link to the cached library instead of recompiling
+//! - Use `cargo build --features force-rebuild` to force a fresh compilation
+//!
+//! # Cache Location
+//!
+//! The cache is stored in the workspace's `target/verovio-cache/` directory to persist
+//! across clean builds of individual crates while still being cleaned by `cargo clean`.
 
 use std::io::Write;
 use std::path::PathBuf;
+
+/// Returns the path to the Verovio cache directory.
+///
+/// The cache is located at `<workspace_root>/target/verovio-cache/` to ensure it:
+/// - Persists across incremental builds
+/// - Is cleaned by `cargo clean`
+/// - Is shared across all build configurations (debug/release)
+fn get_cache_dir() -> PathBuf {
+    // OUT_DIR is something like: target/debug/build/verovioxide-sys-<hash>/out
+    // We want: target/verovio-cache/
+    let out_dir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
+
+    // Navigate up from OUT_DIR to find the target directory
+    // OUT_DIR: target/<profile>/build/<crate>-<hash>/out
+    // We need to go up 4 levels to reach target/
+    let target_dir = out_dir
+        .parent() // out -> <crate>-<hash>
+        .and_then(|p| p.parent()) // <crate>-<hash> -> build
+        .and_then(|p| p.parent()) // build -> <profile>
+        .and_then(|p| p.parent()) // <profile> -> target
+        .expect("Failed to find target directory from OUT_DIR");
+
+    target_dir.join("verovio-cache")
+}
+
+/// Returns the path to the cached static library.
+fn get_cached_library_path() -> PathBuf {
+    let cache_dir = get_cache_dir();
+    if cfg!(target_os = "windows") && cfg!(target_env = "msvc") {
+        cache_dir.join("verovio.lib")
+    } else {
+        cache_dir.join("libverovio.a")
+    }
+}
+
+/// Checks if a cached Verovio library exists and should be used.
+///
+/// Returns `false` if:
+/// - The `force-rebuild` feature is enabled
+/// - The cached library file doesn't exist
+fn should_use_cache() -> bool {
+    // Check for force-rebuild feature
+    if cfg!(feature = "force-rebuild") {
+        println!("cargo:warning=force-rebuild feature enabled, recompiling Verovio");
+        return false;
+    }
+
+    let cached_lib = get_cached_library_path();
+    if cached_lib.exists() {
+        println!(
+            "cargo:warning=Using cached Verovio library from {}",
+            cached_lib.display()
+        );
+        true
+    } else {
+        println!(
+            "cargo:warning=No cached Verovio library found at {}, compiling from source",
+            cached_lib.display()
+        );
+        false
+    }
+}
+
+/// Emits the linker directives to link against the Verovio library.
+fn emit_link_directives(search_path: &std::path::Path) {
+    println!("cargo:rustc-link-search=native={}", search_path.display());
+    println!("cargo:rustc-link-lib=static=verovio");
+
+    // Link the C++ standard library
+    if cfg!(target_os = "macos") {
+        println!("cargo:rustc-link-lib=c++");
+    } else if cfg!(target_os = "linux") {
+        println!("cargo:rustc-link-lib=stdc++");
+    } else if cfg!(target_os = "windows") {
+        // MSVC links the C++ runtime automatically
+        if cfg!(target_env = "gnu") {
+            println!("cargo:rustc-link-lib=stdc++");
+        }
+    }
+}
+
+/// Copies the compiled library to the cache directory.
+fn cache_compiled_library(out_dir: &std::path::Path) {
+    let cache_dir = get_cache_dir();
+
+    // Create cache directory if it doesn't exist
+    if let Err(e) = std::fs::create_dir_all(&cache_dir) {
+        println!(
+            "cargo:warning=Failed to create cache directory: {}. Caching disabled.",
+            e
+        );
+        return;
+    }
+
+    // Determine the library filename based on platform
+    let lib_name = if cfg!(target_os = "windows") && cfg!(target_env = "msvc") {
+        "verovio.lib"
+    } else {
+        "libverovio.a"
+    };
+
+    let source = out_dir.join(lib_name);
+    let dest = cache_dir.join(lib_name);
+
+    if source.exists() {
+        match std::fs::copy(&source, &dest) {
+            Ok(_) => println!("cargo:warning=Cached Verovio library to {}", dest.display()),
+            Err(e) => println!(
+                "cargo:warning=Failed to cache library: {}. Future builds may recompile.",
+                e
+            ),
+        }
+    } else {
+        println!(
+            "cargo:warning=Compiled library not found at {}, caching skipped",
+            source.display()
+        );
+    }
+}
 
 fn main() {
     // Only compile when the bundled feature is enabled
@@ -14,7 +147,11 @@ fn main() {
 
     let manifest_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
     let verovio_dir = manifest_dir.join("../../verovio").canonicalize().unwrap();
+    let out_dir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
 
+    // Set up rerun-if-changed directives
+    // These only affect when Cargo decides to re-run this build script,
+    // not whether we use the cache
     println!("cargo:rerun-if-changed=build.rs");
     println!(
         "cargo:rerun-if-changed={}",
@@ -25,13 +162,34 @@ fn main() {
         verovio_dir.join("tools/c_wrapper.h").display()
     );
 
+    // Check if we can use the cached library
+    if should_use_cache() {
+        let cache_dir = get_cache_dir();
+        emit_link_directives(&cache_dir);
+        return;
+    }
+
+    // --- Full compilation path ---
+
     // Generate git_commit.h if it doesn't exist
     let git_commit_h = verovio_dir.join("include/vrv/git_commit.h");
     if !git_commit_h.exists() {
         let mut file = std::fs::File::create(&git_commit_h).expect("Failed to create git_commit.h");
-        writeln!(file, "////////////////////////////////////////////////////////").unwrap();
-        writeln!(file, "/// Git commit version file generated at compilation ///").unwrap();
-        writeln!(file, "////////////////////////////////////////////////////////").unwrap();
+        writeln!(
+            file,
+            "////////////////////////////////////////////////////////"
+        )
+        .unwrap();
+        writeln!(
+            file,
+            "/// Git commit version file generated at compilation ///"
+        )
+        .unwrap();
+        writeln!(
+            file,
+            "////////////////////////////////////////////////////////"
+        )
+        .unwrap();
         writeln!(file).unwrap();
         writeln!(file, "#define GIT_COMMIT \"\"").unwrap();
         writeln!(file).unwrap();
@@ -175,15 +333,10 @@ fn main() {
     // Compile the library
     build.compile("verovio");
 
-    // Link the C++ standard library
-    if cfg!(target_os = "macos") {
-        println!("cargo:rustc-link-lib=c++");
-    } else if cfg!(target_os = "linux") {
-        println!("cargo:rustc-link-lib=stdc++");
-    } else if cfg!(target_os = "windows") {
-        // MSVC links the C++ runtime automatically
-        if cfg!(target_env = "gnu") {
-            println!("cargo:rustc-link-lib=stdc++");
-        }
-    }
+    // Cache the compiled library for future builds
+    cache_compiled_library(&out_dir);
+
+    // Emit link directives (cc::Build::compile already sets up linking,
+    // but we emit them explicitly for consistency)
+    emit_link_directives(&out_dir);
 }

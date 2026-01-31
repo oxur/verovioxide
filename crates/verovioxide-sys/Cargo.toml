@@ -14,6 +14,9 @@ build = "build.rs"
 [features]
 default = ["bundled"]
 bundled = []
+# Force a fresh recompilation of the Verovio C++ library, bypassing the cache.
+# Use with: cargo build --features force-rebuild
+force-rebuild = []
 
 [build-dependencies]
 cc = "1"
