@@ -799,7 +799,10 @@ mod tests {
 
     #[test]
     fn test_options_builder_midi_options() {
-        let options = Options::builder().midi_tempo(120.0).midi_velocity(80).build();
+        let options = Options::builder()
+            .midi_tempo(120.0)
+            .midi_velocity(80)
+            .build();
 
         assert_eq!(options.midi_tempo, Some(120.0));
         assert_eq!(options.midi_velocity, Some(80));

@@ -94,7 +94,10 @@ K:C
 
     println!("Done! Rendered {} bytes of SVG.", svg.len());
     println!();
-    println!("Open {} in a web browser or SVG viewer to see the result.", output_file);
+    println!(
+        "Open {} in a web browser or SVG viewer to see the result.",
+        output_file
+    );
 
     Ok(())
 }

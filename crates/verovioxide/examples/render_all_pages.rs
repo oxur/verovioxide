@@ -76,7 +76,10 @@ fn main() -> Result<()> {
     toolkit.set_options(&options)?;
 
     // Load the input file (format is auto-detected)
-    println!("Loading file: {} (format auto-detected)", input_path.display());
+    println!(
+        "Loading file: {} (format auto-detected)",
+        input_path.display()
+    );
     toolkit.load_file(input_path)?;
 
     // Get page count

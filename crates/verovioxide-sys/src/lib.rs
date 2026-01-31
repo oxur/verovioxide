@@ -421,10 +421,8 @@ unsafe extern "C" {
     /// # Returns
     ///
     /// `true` if the file was saved successfully, `false` otherwise.
-    pub fn vrvToolkit_renderToExpansionMapFile(
-        tkPtr: *mut c_void,
-        filename: *const c_char,
-    ) -> bool;
+    pub fn vrvToolkit_renderToExpansionMapFile(tkPtr: *mut c_void, filename: *const c_char)
+    -> bool;
 
     /// Render the timemap for the document.
     ///
@@ -715,7 +713,8 @@ unsafe extern "C" {
     /// # Returns
     ///
     /// JSON string with timing information.
-    pub fn vrvToolkit_getTimesForElement(tkPtr: *mut c_void, xmlId: *const c_char) -> *const c_char;
+    pub fn vrvToolkit_getTimesForElement(tkPtr: *mut c_void, xmlId: *const c_char)
+    -> *const c_char;
 
     // =========================================================================
     // Feature Extraction
@@ -873,7 +872,8 @@ unsafe extern "C" {
     /// # Returns
     ///
     /// JSON string with validation results.
-    pub fn vrvToolkit_validatePAEFile(tkPtr: *mut c_void, filename: *const c_char) -> *const c_char;
+    pub fn vrvToolkit_validatePAEFile(tkPtr: *mut c_void, filename: *const c_char)
+    -> *const c_char;
 }
 
 #[cfg(test)]

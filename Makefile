@@ -185,14 +185,14 @@ clean-all: clean
 test:
 	@echo "$(BLUE)Running tests...$(RESET)"
 	@echo "$(CYAN)• Running all workspace tests...$(RESET)"
-	@cargo test --all-features --workspace
+	@cargo test --workspace
 	@echo "$(GREEN)✓ All tests passed$(RESET)"
 
 .PHONY: lint
 lint:
 	@echo "$(BLUE)Running linter checks...$(RESET)"
 	@echo "$(CYAN)• Running clippy...$(RESET)"
-	@cargo clippy --all-features --workspace -- -D warnings
+	@cargo clippy --workspace -- -D warnings
 	@echo "$(GREEN)✓ Clippy passed$(RESET)"
 	@echo "$(CYAN)• Checking code formatting...$(RESET)"
 	@cargo fmt --all -- --check
@@ -208,18 +208,18 @@ format:
 .PHONY: coverage
 coverage:
 	@echo "$(BLUE)Generating test coverage report...$(RESET)"
-	@echo "$(CYAN)• Running tests with coverage (ecl crate only)...$(RESET)"
-	@cd crates/ecl && cargo llvm-cov --lib --no-default-features
+	@echo "$(CYAN)• Running tests with coverage...$(RESET)"
+	@cargo llvm-cov --lib --workspace --ignore-filename-regex 'verovioxide-sys'
 	@echo "$(GREEN)✓ Coverage report generated$(RESET)"
-	@echo "$(YELLOW)→ For detailed HTML report, run: cd crates/ecl && cargo llvm-cov --html --lib --no-default-features$(RESET)"
+	@echo "$(YELLOW)→ For detailed HTML report, run: make coverage-html$(RESET)"
 
 .PHONY: coverage-html
 coverage-html:
 	@echo "$(BLUE)Generating HTML coverage report...$(RESET)"
-	@echo "$(CYAN)• Running tests with coverage (ecl crate only)...$(RESET)"
-	@cd crates/ecl && cargo llvm-cov --html --lib --no-default-features
+	@echo "$(CYAN)• Running tests with coverage...$(RESET)"
+	@cargo llvm-cov --html --lib --workspace --ignore-filename-regex 'verovioxide-sys'
 	@echo "$(GREEN)✓ HTML coverage report generated$(RESET)"
-	@echo "$(CYAN)→ Report: crates/ecl/target/llvm-cov/html/index.html$(RESET)"
+	@echo "$(CYAN)→ Report: target/llvm-cov/html/index.html$(RESET)"
 
 # Combined check targets
 .PHONY: check
@@ -253,7 +253,7 @@ push:
 	@echo "$(GREEN)✓ Pushed$(RESET)"
 
 # Crates in dependency order (leaf crates first, dependent crates later)
-# ECL crates: design -> core -> steps -> workflows -> cli -> ecl
+# ECL crates: design -> core -> steps -> workflows -> cli -> $(CODE_NAME)
 # Fabryk crates: core -> (client, acl, storage) -> query -> api -> (mcp, cli) -> fabryk
 PUBLISH_ORDER := verovioxide-data verovioxide-sys verovioxide
 # crates.io rate limit delay (seconds)
@@ -349,7 +349,7 @@ publish-dry-run:
 publish-one:
 	@if [ -z "$(CRATE)" ]; then \
 		echo "$(RED)Error: CRATE variable not set$(RESET)"; \
-		echo "Usage: make publish-one CRATE=ecl-core"; \
+		echo "Usage: make publish-one CRATE=$(CODE_NAME)"; \
 		exit 1; \
 	fi
 	@echo ""

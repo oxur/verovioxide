@@ -130,14 +130,16 @@ mod options;
 mod toolkit;
 
 pub use error::{Error, Result};
-pub use options::{BreakMode, CondenseMode, FooterMode, HeaderMode, Options, OptionsBuilder, TextFont};
+pub use options::{
+    BreakMode, CondenseMode, FooterMode, HeaderMode, Options, OptionsBuilder, TextFont,
+};
 pub use toolkit::Toolkit;
 
 // Re-export data crate types when bundled-data feature is enabled
 #[cfg(feature = "bundled-data")]
 pub use verovioxide_data::{
-    available_fonts, default_font, extract_resources, has_bravura, has_gootville, has_leland,
-    has_leipzig, has_petaluma, resource_dir, DataError,
+    DataError, available_fonts, default_font, extract_resources, has_bravura, has_gootville,
+    has_leipzig, has_leland, has_petaluma, resource_dir,
 };
 
 #[cfg(test)]

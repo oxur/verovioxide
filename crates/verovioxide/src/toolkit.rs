@@ -39,7 +39,7 @@
 //! println!("{}", svg);
 //! ```
 
-use std::ffi::{c_void, CStr, CString};
+use std::ffi::{CStr, CString, c_void};
 use std::path::Path;
 
 #[cfg(feature = "bundled-data")]
@@ -122,9 +122,9 @@ impl Toolkit {
         let temp_dir = verovioxide_data::extract_resources()?;
         let resource_path = temp_dir.path();
 
-        let path_str = resource_path
-            .to_str()
-            .ok_or_else(|| Error::InitializationError("resource path contains invalid UTF-8".into()))?;
+        let path_str = resource_path.to_str().ok_or_else(|| {
+            Error::InitializationError("resource path contains invalid UTF-8".into())
+        })?;
 
         let c_path = CString::new(path_str)?;
 
@@ -168,9 +168,9 @@ impl Toolkit {
     ///     .expect("Failed to create toolkit");
     /// ```
     pub fn with_resource_path(path: &Path) -> Result<Self> {
-        let path_str = path
-            .to_str()
-            .ok_or_else(|| Error::InitializationError("resource path contains invalid UTF-8".into()))?;
+        let path_str = path.to_str().ok_or_else(|| {
+            Error::InitializationError("resource path contains invalid UTF-8".into())
+        })?;
 
         let c_path = CString::new(path_str)?;
 
@@ -353,9 +353,8 @@ impl Toolkit {
         }
 
         // SAFETY: ptr is valid, page number is in range
-        let svg_ptr = unsafe {
-            verovioxide_sys::vrvToolkit_renderToSVG(self.ptr, page as i32, false)
-        };
+        let svg_ptr =
+            unsafe { verovioxide_sys::vrvToolkit_renderToSVG(self.ptr, page as i32, false) };
 
         self.ptr_to_string(svg_ptr)
             .ok_or_else(|| Error::RenderError("failed to render SVG".into()))
@@ -383,9 +382,8 @@ impl Toolkit {
         }
 
         // SAFETY: ptr is valid, page number is in range
-        let svg_ptr = unsafe {
-            verovioxide_sys::vrvToolkit_renderToSVG(self.ptr, page as i32, true)
-        };
+        let svg_ptr =
+            unsafe { verovioxide_sys::vrvToolkit_renderToSVG(self.ptr, page as i32, true) };
 
         self.ptr_to_string(svg_ptr)
             .ok_or_else(|| Error::RenderError("failed to render SVG".into()))
@@ -573,7 +571,8 @@ impl Toolkit {
     pub fn version(&self) -> String {
         // SAFETY: ptr is valid
         let version_ptr = unsafe { verovioxide_sys::vrvToolkit_getVersion(self.ptr) };
-        self.ptr_to_string(version_ptr).unwrap_or_else(|| "unknown".to_string())
+        self.ptr_to_string(version_ptr)
+            .unwrap_or_else(|| "unknown".to_string())
     }
 
     /// Returns the log output from Verovio.
@@ -701,9 +700,8 @@ impl Toolkit {
         let c_options = CString::new(options)?;
 
         // SAFETY: ptr is valid, c_options is a valid null-terminated string
-        let timemap_ptr = unsafe {
-            verovioxide_sys::vrvToolkit_renderToTimemap(self.ptr, c_options.as_ptr())
-        };
+        let timemap_ptr =
+            unsafe { verovioxide_sys::vrvToolkit_renderToTimemap(self.ptr, c_options.as_ptr()) };
 
         self.ptr_to_string(timemap_ptr)
             .ok_or_else(|| Error::RenderError("failed to render timemap".into()))
@@ -782,7 +780,8 @@ impl Toolkit {
         let c_path = CString::new(path_str)?;
 
         // SAFETY: ptr is valid, c_path is a valid null-terminated string
-        let success = unsafe { verovioxide_sys::vrvToolkit_setResourcePath(self.ptr, c_path.as_ptr()) };
+        let success =
+            unsafe { verovioxide_sys::vrvToolkit_setResourcePath(self.ptr, c_path.as_ptr()) };
 
         if success {
             Ok(())
@@ -804,7 +803,8 @@ impl Toolkit {
         let c_id = CString::new(xml_id)?;
 
         // SAFETY: ptr is valid, c_id is a valid null-terminated string
-        let page = unsafe { verovioxide_sys::vrvToolkit_getPageWithElement(self.ptr, c_id.as_ptr()) };
+        let page =
+            unsafe { verovioxide_sys::vrvToolkit_getPageWithElement(self.ptr, c_id.as_ptr()) };
 
         Ok(page.max(0) as u32)
     }
@@ -822,10 +822,12 @@ impl Toolkit {
         let c_id = CString::new(xml_id)?;
 
         // SAFETY: ptr is valid, c_id is a valid null-terminated string
-        let attr_ptr = unsafe { verovioxide_sys::vrvToolkit_getElementAttr(self.ptr, c_id.as_ptr()) };
+        let attr_ptr =
+            unsafe { verovioxide_sys::vrvToolkit_getElementAttr(self.ptr, c_id.as_ptr()) };
 
-        self.ptr_to_string(attr_ptr)
-            .ok_or_else(|| Error::RenderError(format!("failed to get attributes for element: {}", xml_id)))
+        self.ptr_to_string(attr_ptr).ok_or_else(|| {
+            Error::RenderError(format!("failed to get attributes for element: {}", xml_id))
+        })
     }
 
     /// Gets elements at a specific time in milliseconds.
@@ -839,10 +841,12 @@ impl Toolkit {
     /// A JSON string with the element IDs at the specified time.
     pub fn get_elements_at_time(&self, millisec: i32) -> Result<String> {
         // SAFETY: ptr is valid
-        let elements_ptr = unsafe { verovioxide_sys::vrvToolkit_getElementsAtTime(self.ptr, millisec) };
+        let elements_ptr =
+            unsafe { verovioxide_sys::vrvToolkit_getElementsAtTime(self.ptr, millisec) };
 
-        self.ptr_to_string(elements_ptr)
-            .ok_or_else(|| Error::RenderError(format!("failed to get elements at time: {}", millisec)))
+        self.ptr_to_string(elements_ptr).ok_or_else(|| {
+            Error::RenderError(format!("failed to get elements at time: {}", millisec))
+        })
     }
 
     /// Gets the time (in milliseconds) for an element.
@@ -858,7 +862,8 @@ impl Toolkit {
         let c_id = CString::new(xml_id)?;
 
         // SAFETY: ptr is valid, c_id is a valid null-terminated string
-        let time = unsafe { verovioxide_sys::vrvToolkit_getTimeForElement(self.ptr, c_id.as_ptr()) };
+        let time =
+            unsafe { verovioxide_sys::vrvToolkit_getTimeForElement(self.ptr, c_id.as_ptr()) };
 
         Ok(time)
     }
@@ -1057,7 +1062,9 @@ mod tests {
     fn test_toolkit_set_options() {
         let mut toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
         let options = Options::builder().scale(80).build();
-        toolkit.set_options(&options).expect("Failed to set options");
+        toolkit
+            .set_options(&options)
+            .expect("Failed to set options");
     }
 
     #[test]
@@ -1273,7 +1280,9 @@ mod tests {
             .adjust_page_height(true)
             .build();
 
-        toolkit.set_options(&options).expect("Failed to set options");
+        toolkit
+            .set_options(&options)
+            .expect("Failed to set options");
 
         let mei = r#"<?xml version="1.0" encoding="UTF-8"?>
 <mei xmlns="http://www.music-encoding.org/ns/mei">

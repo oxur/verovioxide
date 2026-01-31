@@ -119,10 +119,15 @@ fn test_render_mei() {
         .expect("Failed to load MEI data");
 
     // Verify we have pages
-    assert!(toolkit.page_count() >= 1, "Document should have at least 1 page");
+    assert!(
+        toolkit.page_count() >= 1,
+        "Document should have at least 1 page"
+    );
 
     // Render to SVG and verify
-    let svg = toolkit.render_to_svg(1).expect("Failed to render MEI to SVG");
+    let svg = toolkit
+        .render_to_svg(1)
+        .expect("Failed to render MEI to SVG");
     assert_valid_svg(&svg);
 }
 
@@ -141,10 +146,15 @@ fn test_render_abc() {
         .expect("Failed to load ABC data");
 
     // Verify we have pages
-    assert!(toolkit.page_count() >= 1, "Document should have at least 1 page");
+    assert!(
+        toolkit.page_count() >= 1,
+        "Document should have at least 1 page"
+    );
 
     // Render to SVG and verify
-    let svg = toolkit.render_to_svg(1).expect("Failed to render ABC to SVG");
+    let svg = toolkit
+        .render_to_svg(1)
+        .expect("Failed to render ABC to SVG");
     assert_valid_svg(&svg);
 }
 
@@ -168,7 +178,9 @@ CDEF | GABC |]
 
     assert!(toolkit.page_count() >= 1);
 
-    let svg = toolkit.render_to_svg(1).expect("Failed to render inline ABC");
+    let svg = toolkit
+        .render_to_svg(1)
+        .expect("Failed to render inline ABC");
     assert_valid_svg(&svg);
 }
 
@@ -201,7 +213,9 @@ fn test_options() {
         .expect("Failed to load MEI data");
 
     // Render should work with custom options
-    let svg = toolkit.render_to_svg(1).expect("Failed to render with custom options");
+    let svg = toolkit
+        .render_to_svg(1)
+        .expect("Failed to render with custom options");
     assert_valid_svg(&svg);
 
     // Verify scale was set correctly
@@ -267,7 +281,10 @@ fn test_options_reset() {
     // The exact reset behavior is Verovio-version dependent
     let _scale = toolkit.get_scale();
     let _options = toolkit.get_options();
-    assert!(!_options.is_empty(), "Options should still be retrievable after reset");
+    assert!(
+        !_options.is_empty(),
+        "Options should still be retrievable after reset"
+    );
 }
 
 // =============================================================================
@@ -288,8 +305,14 @@ fn test_get_mei_export() {
     let mei = toolkit.get_mei().expect("Failed to export MEI");
 
     // Verify it's valid MEI
-    assert!(mei.contains("<mei"), "Exported data should contain <mei tag");
-    assert!(mei.contains("</mei>"), "Exported data should contain </mei> closing tag");
+    assert!(
+        mei.contains("<mei"),
+        "Exported data should contain <mei tag"
+    );
+    assert!(
+        mei.contains("</mei>"),
+        "Exported data should contain </mei> closing tag"
+    );
     assert!(
         mei.contains("http://www.music-encoding.org/ns/mei"),
         "Exported data should contain MEI namespace"
@@ -466,8 +489,14 @@ fn test_toolkit_debug() {
     let toolkit = Toolkit::new().expect("Failed to create toolkit");
 
     let debug_str = format!("{:?}", toolkit);
-    assert!(debug_str.contains("Toolkit"), "Debug should contain 'Toolkit'");
-    assert!(debug_str.contains("version"), "Debug should contain 'version'");
+    assert!(
+        debug_str.contains("Toolkit"),
+        "Debug should contain 'Toolkit'"
+    );
+    assert!(
+        debug_str.contains("version"),
+        "Debug should contain 'version'"
+    );
 }
 
 // =============================================================================

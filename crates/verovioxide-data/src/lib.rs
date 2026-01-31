@@ -37,7 +37,7 @@
 //! assert!(path.exists());
 //! ```
 
-use include_dir::{include_dir, Dir};
+use include_dir::{Dir, include_dir};
 use std::io;
 use std::path::Path;
 use tempfile::TempDir;
@@ -257,7 +257,10 @@ mod tests {
     fn test_resource_dir_contains_bravura_xml() {
         let dir = resource_dir();
         let bravura = dir.get_file("Bravura.xml");
-        assert!(bravura.is_some(), "Bravura.xml should exist in embedded data");
+        assert!(
+            bravura.is_some(),
+            "Bravura.xml should exist in embedded data"
+        );
     }
 
     #[test]
@@ -298,7 +301,10 @@ mod tests {
     #[test]
     fn test_available_fonts_includes_bravura() {
         let fonts = available_fonts();
-        assert!(fonts.contains(&"Bravura"), "Bravura should always be available");
+        assert!(
+            fonts.contains(&"Bravura"),
+            "Bravura should always be available"
+        );
     }
 
     #[test]
@@ -346,7 +352,9 @@ mod tests {
     #[test]
     fn test_bravura_xml_has_content() {
         let dir = resource_dir();
-        let bravura = dir.get_file("Bravura.xml").expect("Bravura.xml should exist");
+        let bravura = dir
+            .get_file("Bravura.xml")
+            .expect("Bravura.xml should exist");
         let contents = bravura.contents_utf8().expect("Should be valid UTF-8");
         assert!(
             contents.contains("bounding-boxes"),
@@ -362,6 +370,9 @@ mod tests {
         // include_dir stores full paths from the included directory root
         // So we need to check for "text/Times.xml" not just "Times.xml"
         let times = text_dir.get_file("text/Times.xml");
-        assert!(times.is_some(), "text/Times.xml should exist in text directory");
+        assert!(
+            times.is_some(),
+            "text/Times.xml should exist in text directory"
+        );
     }
 }

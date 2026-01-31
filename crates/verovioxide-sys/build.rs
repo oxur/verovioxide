@@ -27,21 +27,17 @@ use std::path::PathBuf;
 /// - Is cleaned by `cargo clean`
 /// - Is shared across all build configurations (debug/release)
 fn get_cache_dir() -> PathBuf {
-    // OUT_DIR is something like: target/debug/build/verovioxide-sys-<hash>/out
-    // We want: target/verovio-cache/
-    let out_dir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
+    // Use CARGO_MANIFEST_DIR to find the workspace root reliably.
+    // This works regardless of the target directory structure (normal, llvm-cov, etc.)
+    let manifest_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
 
-    // Navigate up from OUT_DIR to find the target directory
-    // OUT_DIR: target/<profile>/build/<crate>-<hash>/out
-    // We need to go up 4 levels to reach target/
-    let target_dir = out_dir
-        .parent() // out -> <crate>-<hash>
-        .and_then(|p| p.parent()) // <crate>-<hash> -> build
-        .and_then(|p| p.parent()) // build -> <profile>
-        .and_then(|p| p.parent()) // <profile> -> target
-        .expect("Failed to find target directory from OUT_DIR");
+    // Navigate up from crates/verovioxide-sys to workspace root
+    let workspace_root = manifest_dir
+        .parent() // verovioxide-sys -> crates
+        .and_then(|p| p.parent()) // crates -> workspace root
+        .expect("Failed to find workspace root from CARGO_MANIFEST_DIR");
 
-    target_dir.join("verovio-cache")
+    workspace_root.join("target").join("verovio-cache")
 }
 
 /// Returns the path to the cached static library.

@@ -177,12 +177,6 @@ This project is licensed under the Apache License 2.0.
 - [Verovio](https://www.verovio.org/) is licensed under the LGPL-3.0
 - SMuFL fonts have their own licenses (see the respective font directories)
 
-## Acknowledgments
-
-- [Verovio](https://www.verovio.org/) - The music notation engraving library
-- [SMuFL](https://www.smufl.org/) - Standard Music Font Layout specification
-- The music encoding community for MEI, MusicXML, and other formats
-
 [//]: ---Named-Links---
 
 [logo]: assets/images/logo/v1-x250.png
