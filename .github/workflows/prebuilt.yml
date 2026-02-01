@@ -1,0 +1,245 @@
+name: Build Prebuilt Libraries
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to upload artifacts to (e.g., v0.1.0)'
+        required: true
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+  VEROVIO_VERSION: "5.7.0"
+
+jobs:
+  build:
+    name: Build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-apple-darwin
+            os: macos-13
+            lib_name: libverovio.a
+          - target: aarch64-apple-darwin
+            os: macos-14
+            lib_name: libverovio.a
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            lib_name: libverovio.a
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            lib_name: libverovio.a
+            cross: true
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            lib_name: verovio.lib
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install dependencies (Ubuntu)
+        if: matrix.os == 'ubuntu-latest' && !matrix.cross
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake build-essential pkg-config
+
+      - name: Install dependencies (Ubuntu cross-compile aarch64)
+        if: matrix.cross
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake build-essential pkg-config
+          sudo apt-get install -y g++-aarch64-linux-gnu libc6-dev-arm64-cross
+
+      - name: Install dependencies (macOS)
+        if: startsWith(matrix.os, 'macos')
+        run: |
+          brew install cmake
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Build library (native)
+        if: "!matrix.cross"
+        run: cargo build -p verovioxide-sys --release --target ${{ matrix.target }}
+
+      - name: Build library (cross-compile aarch64-linux)
+        if: matrix.cross
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+          CC_aarch64_unknown_linux_gnu: aarch64-linux-gnu-gcc
+          CXX_aarch64_unknown_linux_gnu: aarch64-linux-gnu-g++
+          AR_aarch64_unknown_linux_gnu: aarch64-linux-gnu-ar
+        run: cargo build -p verovioxide-sys --release --target ${{ matrix.target }}
+
+      - name: Find and rename library
+        shell: bash
+        run: |
+          # Find the compiled library in the target directory
+          LIB_PATH="target/${{ matrix.target }}/release/build"
+
+          # Find the verovioxide-sys build output directory
+          BUILD_DIR=$(find "$LIB_PATH" -type d -name "verovioxide-sys-*" -path "*/out" 2>/dev/null | head -1 || true)
+
+          if [ -z "$BUILD_DIR" ]; then
+            # Try alternative path structure
+            BUILD_DIR=$(find "$LIB_PATH" -type d -name "out" -path "*verovioxide-sys*" 2>/dev/null | head -1 || true)
+          fi
+
+          if [ -z "$BUILD_DIR" ]; then
+            echo "Searching for library in build directory..."
+            find "$LIB_PATH" -name "${{ matrix.lib_name }}" -type f 2>/dev/null || true
+            BUILD_DIR=$(dirname "$(find "$LIB_PATH" -name "${{ matrix.lib_name }}" -type f 2>/dev/null | head -1)")
+          fi
+
+          echo "Build directory: $BUILD_DIR"
+
+          # Also check the verovio-cache directory
+          CACHE_LIB="target/verovio-cache/${{ matrix.lib_name }}"
+
+          if [ -f "$CACHE_LIB" ]; then
+            echo "Found library in cache: $CACHE_LIB"
+            SOURCE_LIB="$CACHE_LIB"
+          elif [ -f "$BUILD_DIR/${{ matrix.lib_name }}" ]; then
+            echo "Found library in build dir: $BUILD_DIR/${{ matrix.lib_name }}"
+            SOURCE_LIB="$BUILD_DIR/${{ matrix.lib_name }}"
+          else
+            echo "ERROR: Could not find ${{ matrix.lib_name }}"
+            echo "Listing target directory structure:"
+            find target -name "*.a" -o -name "*.lib" 2>/dev/null | head -20
+            exit 1
+          fi
+
+          # Determine output filename based on platform
+          if [[ "${{ matrix.target }}" == *"windows"* ]]; then
+            OUTPUT_NAME="verovio-${{ env.VEROVIO_VERSION }}-${{ matrix.target }}.lib"
+          else
+            OUTPUT_NAME="libverovio-${{ env.VEROVIO_VERSION }}-${{ matrix.target }}.a"
+          fi
+
+          # Copy and rename
+          mkdir -p artifacts
+          cp "$SOURCE_LIB" "artifacts/$OUTPUT_NAME"
+
+          echo "Created: artifacts/$OUTPUT_NAME"
+          ls -la artifacts/
+
+          # Compute SHA256
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            HASH=$(certutil -hashfile "artifacts/$OUTPUT_NAME" SHA256 | grep -v ":" | tr -d ' ')
+          else
+            HASH=$(shasum -a 256 "artifacts/$OUTPUT_NAME" | cut -d' ' -f1)
+          fi
+
+          echo "SHA256: $HASH"
+          echo "$HASH  $OUTPUT_NAME" > "artifacts/$OUTPUT_NAME.sha256"
+
+          # Save for later steps
+          echo "OUTPUT_NAME=$OUTPUT_NAME" >> $GITHUB_ENV
+          echo "HASH=$HASH" >> $GITHUB_ENV
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: artifacts/*
+          retention-days: 7
+
+  upload-release:
+    name: Upload to Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: |
+          echo "Downloaded artifacts:"
+          find artifacts -type f | sort
+
+      - name: Determine release tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate hash manifest
+        run: |
+          # Generate hashes.json for automated verification by build.rs
+          echo "{" > hashes.json
+          FIRST=true
+
+          for sha_file in artifacts/*/*.sha256; do
+            if [ -f "$sha_file" ]; then
+              HASH=$(cut -d' ' -f1 "$sha_file")
+              TARGET=$(basename "$(dirname "$sha_file")")
+
+              if [ "$FIRST" = true ]; then
+                FIRST=false
+              else
+                echo "," >> hashes.json
+              fi
+
+              printf '  "%s": "%s"' "$TARGET" "$HASH" >> hashes.json
+            fi
+          done
+
+          echo "" >> hashes.json
+          echo "}" >> hashes.json
+
+          echo "Generated hashes.json:"
+          cat hashes.json
+          cp hashes.json artifacts/
+
+          # Also generate human-readable HASHES.md for reference
+          echo "# SHA256 Hashes for Prebuilt Libraries" > HASHES.md
+          echo "" >> HASHES.md
+          echo "Verovio version: ${{ env.VEROVIO_VERSION }}" >> HASHES.md
+          echo "" >> HASHES.md
+          echo "| Target | Hash |" >> HASHES.md
+          echo "|--------|------|" >> HASHES.md
+
+          for sha_file in artifacts/*/*.sha256; do
+            if [ -f "$sha_file" ]; then
+              HASH=$(cut -d' ' -f1 "$sha_file")
+              TARGET=$(basename "$(dirname "$sha_file")")
+              echo "| $TARGET | \`$HASH\` |" >> HASHES.md
+            fi
+          done
+
+          cat HASHES.md
+          cp HASHES.md artifacts/
+
+      - name: Upload to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          files: |
+            artifacts/**/*.a
+            artifacts/**/*.lib
+            artifacts/**/*.sha256
+            artifacts/hashes.json
+            artifacts/HASHES.md
+          fail_on_unmatched_files: false

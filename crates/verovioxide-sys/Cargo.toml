@@ -13,7 +13,11 @@ build = "build.rs"
 
 [features]
 default = ["bundled"]
+# Compile Verovio C++ library from source (slower first build, but works everywhere)
 bundled = []
+# Download pre-built Verovio library from GitHub releases (fast, but limited platforms)
+# Supported: x86_64-apple-darwin, aarch64-apple-darwin, x86_64-unknown-linux-gnu, x86_64-pc-windows-msvc
+prebuilt = []
 # Force a fresh recompilation of the Verovio C++ library, bypassing the cache.
 # Use with: cargo build --features force-rebuild
 force-rebuild = []

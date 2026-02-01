@@ -1,9 +1,16 @@
 //! Build script for verovioxide-sys.
 //!
-//! This script compiles the Verovio C++ library from source using the `cc` crate.
-//! It handles platform-specific configuration and links the appropriate C++ standard library.
+//! This script compiles the Verovio C++ library from source using the `cc` crate,
+//! or downloads a pre-built library when the `prebuilt` feature is enabled.
 //!
-//! # Source Discovery
+//! # Build Modes
+//!
+//! - **`bundled` feature (default)**: Compiles Verovio from source. Slower first build
+//!   but works on any platform with a C++ compiler.
+//! - **`prebuilt` feature**: Downloads a pre-built static library from GitHub releases.
+//!   Much faster, but only available for supported platforms.
+//!
+//! # Source Discovery (bundled mode)
 //!
 //! The build script looks for Verovio source code in the following order:
 //!
@@ -44,12 +51,209 @@ const VEROVIO_VERSION: &str = "5.7.0";
 const VEROVIO_TARBALL_SHA256: &str =
     "bf7483504ddbf2d7ff59ae53b547e6347f89f82583559bf264d97b3624279d5e";
 
-/// GitHub release tarball URL.
+/// GitHub release tarball URL for source code.
 fn get_download_url() -> String {
     format!(
         "https://github.com/rism-digital/verovio/archive/refs/tags/version-{}.tar.gz",
         VEROVIO_VERSION
     )
+}
+
+/// verovioxide release version for prebuilt binaries.
+/// This should match the crate version when prebuilt binaries are available.
+const VEROVIOXIDE_VERSION: &str = "0.1.0";
+
+/// Base URL for GitHub releases.
+fn get_release_base_url() -> String {
+    format!(
+        "https://github.com/oxur/verovioxide/releases/download/v{}",
+        VEROVIOXIDE_VERSION
+    )
+}
+
+/// GitHub release URL for prebuilt static libraries.
+fn get_prebuilt_url(target: &str) -> String {
+    let lib_name = get_prebuilt_lib_name(target);
+    format!("{}/{}", get_release_base_url(), lib_name)
+}
+
+/// URL for the hash manifest file.
+fn get_hashes_url() -> String {
+    format!("{}/hashes.json", get_release_base_url())
+}
+
+/// Returns the library filename for a given target.
+fn get_prebuilt_lib_name(target: &str) -> String {
+    if target.contains("windows") && target.contains("msvc") {
+        format!("verovio-{}-{}.lib", VEROVIO_VERSION, target)
+    } else {
+        format!("libverovio-{}-{}.a", VEROVIO_VERSION, target)
+    }
+}
+
+/// Supported targets for prebuilt binaries.
+const SUPPORTED_TARGETS: &[&str] = &[
+    "x86_64-apple-darwin",
+    "aarch64-apple-darwin",
+    "x86_64-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
+    "x86_64-pc-windows-msvc",
+];
+
+/// Downloads the hash manifest and returns the expected hash for a target.
+fn fetch_prebuilt_sha256(target: &str) -> Result<String, String> {
+    let url = get_hashes_url();
+
+    let cache_dir = get_cache_dir();
+    std::fs::create_dir_all(&cache_dir)
+        .map_err(|e| format!("Failed to create cache directory: {}", e))?;
+
+    // Cache the hashes file to avoid re-downloading
+    let hashes_cache_path = cache_dir.join(format!("hashes-v{}.json", VEROVIOXIDE_VERSION));
+
+    let hashes_json = if hashes_cache_path.exists() {
+        std::fs::read_to_string(&hashes_cache_path)
+            .map_err(|e| format!("Failed to read cached hashes: {}", e))?
+    } else {
+        println!("cargo:warning=Downloading hash manifest from: {}", url);
+
+        let response = ureq::get(&url).call().map_err(|e| {
+            format!(
+                "Failed to download hash manifest: {}\n\n\
+                 This likely means prebuilt binaries haven't been released yet for v{}.\n\
+                 Use the 'bundled' feature to compile from source:\n\
+                 cargo build --no-default-features --features bundled",
+                e, VEROVIOXIDE_VERSION
+            )
+        })?;
+
+        if response.status() != 200 {
+            return Err(format!(
+                "HTTP error downloading hash manifest: status {}\n\n\
+                 Prebuilt binaries may not be available for v{}.\n\
+                 Use the 'bundled' feature to compile from source.",
+                response.status(),
+                VEROVIOXIDE_VERSION
+            ));
+        }
+
+        let json = response
+            .into_string()
+            .map_err(|e| format!("Failed to read hash manifest: {}", e))?;
+
+        // Cache for future builds
+        let _ = std::fs::write(&hashes_cache_path, &json);
+
+        json
+    };
+
+    // Parse the JSON to find our target's hash
+    // Format: {"x86_64-apple-darwin": "abc123...", ...}
+    // Using simple string parsing to avoid adding serde_json as build dependency
+    let search_key = format!("\"{}\"", target);
+    if let Some(key_pos) = hashes_json.find(&search_key) {
+        // Find the colon after the key
+        let after_key = &hashes_json[key_pos + search_key.len()..];
+        if let Some(colon_pos) = after_key.find(':') {
+            let after_colon = &after_key[colon_pos + 1..];
+            // Find the opening quote of the value
+            if let Some(quote_start) = after_colon.find('"') {
+                let value_start = &after_colon[quote_start + 1..];
+                // Find the closing quote
+                if let Some(quote_end) = value_start.find('"') {
+                    let hash = &value_start[..quote_end];
+                    return Ok(hash.to_string());
+                }
+            }
+        }
+    }
+
+    Err(format!(
+        "No prebuilt library available for target '{}'. \n\
+         Supported targets: {}.\n\n\
+         Use the 'bundled' feature instead to compile from source:\n\
+         cargo build --no-default-features --features bundled",
+        target,
+        SUPPORTED_TARGETS.join(", ")
+    ))
+}
+
+/// Downloads and verifies a prebuilt library.
+///
+/// Returns the path to the downloaded library, or an error message.
+fn download_prebuilt() -> Result<PathBuf, String> {
+    let target = std::env::var("TARGET").map_err(|_| "TARGET environment variable not set")?;
+
+    // Check if target is in the supported list
+    if !SUPPORTED_TARGETS.contains(&target.as_str()) {
+        return Err(format!(
+            "Target '{}' is not supported for prebuilt binaries.\n\
+             Supported targets: {}.\n\n\
+             Use the 'bundled' feature instead to compile from source:\n\
+             cargo build --no-default-features --features bundled",
+            target,
+            SUPPORTED_TARGETS.join(", ")
+        ));
+    }
+
+    let cache_dir = get_cache_dir();
+    std::fs::create_dir_all(&cache_dir)
+        .map_err(|e| format!("Failed to create cache directory: {}", e))?;
+
+    let lib_name = get_prebuilt_lib_name(&target);
+    let lib_path = cache_dir.join(&lib_name);
+
+    // Fetch the expected hash from the manifest
+    let expected_hash = fetch_prebuilt_sha256(&target)?;
+
+    // Check if we already have a valid cached prebuilt
+    if lib_path.exists() {
+        match verify_sha256(&lib_path, &expected_hash) {
+            Ok(HashVerification::Match) => {
+                println!(
+                    "cargo:warning=Using cached prebuilt library: {}",
+                    lib_path.display()
+                );
+                return Ok(lib_path);
+            }
+            _ => {
+                // Hash mismatch or error, re-download
+                let _ = std::fs::remove_file(&lib_path);
+            }
+        }
+    }
+
+    // Download the prebuilt library
+    let url = get_prebuilt_url(&target);
+    println!(
+        "cargo:warning=Downloading prebuilt Verovio library from: {}",
+        url
+    );
+
+    download_file(&url, &lib_path)?;
+
+    // Verify the hash
+    match verify_sha256(&lib_path, &expected_hash) {
+        Ok(HashVerification::Match) => {
+            println!("cargo:warning=Prebuilt library verified successfully");
+            Ok(lib_path)
+        }
+        Ok(HashVerification::Mismatch { actual }) => {
+            let _ = std::fs::remove_file(&lib_path);
+            Err(format!(
+                "SHA256 hash mismatch for prebuilt library.\n\
+                 Expected: {}\n\
+                 Actual:   {}\n\n\
+                 The prebuilt binary may be corrupted or tampered with.\n\
+                 Try again or use --features bundled to compile from source.",
+                expected_hash, actual
+            ))
+        }
+        Err(e) => {
+            let _ = std::fs::remove_file(&lib_path);
+            Err(format!("Failed to verify prebuilt library: {}", e))
+        }
+    }
 }
 
 /// Returns the path to the Verovio cache directory.
@@ -365,19 +569,49 @@ fn discover_verovio_source() -> Result<PathBuf, String> {
 }
 
 fn main() {
-    // Only compile when the bundled feature is enabled
-    // (use env var since cfg! is compile-time, not runtime in build scripts)
-    if std::env::var("CARGO_FEATURE_BUNDLED").is_err() {
-        return;
-    }
+    // Set up rerun-if-changed directives
+    println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-env-changed=VEROVIO_SOURCE_DIR");
 
     let out_dir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
 
-    // Set up rerun-if-changed directives
-    // These only affect when Cargo decides to re-run this build script,
-    // not whether we use the cache
-    println!("cargo:rerun-if-changed=build.rs");
-    println!("cargo:rerun-if-env-changed=VEROVIO_SOURCE_DIR");
+    // Check which feature is enabled (use env var since cfg! is compile-time)
+    let prebuilt_enabled = std::env::var("CARGO_FEATURE_PREBUILT").is_ok();
+    let bundled_enabled = std::env::var("CARGO_FEATURE_BUNDLED").is_ok();
+
+    // Handle prebuilt feature - download pre-compiled library
+    if prebuilt_enabled {
+        match download_prebuilt() {
+            Ok(lib_path) => {
+                let lib_dir = lib_path.parent().expect("library path has no parent");
+                emit_link_directives(lib_dir);
+                return;
+            }
+            Err(e) => {
+                if bundled_enabled {
+                    // Fall back to bundled compilation
+                    println!(
+                        "cargo:warning=Prebuilt download failed, falling back to bundled compilation: {}",
+                        e
+                    );
+                } else {
+                    panic!(
+                        "\n\nFailed to download prebuilt Verovio library:\n\n{}\n\n\
+                         To resolve this, you can:\n\
+                         1. Use --features bundled to compile from source instead\n\
+                         2. Check your network connection\n\
+                         3. Verify the target platform is supported\n\n",
+                        e
+                    );
+                }
+            }
+        }
+    }
+
+    // Only compile when the bundled feature is enabled
+    if !bundled_enabled {
+        return;
+    }
 
     // Check if we can use the cached library
     if should_use_cache() {
