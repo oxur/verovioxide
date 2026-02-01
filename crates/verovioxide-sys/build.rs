@@ -476,7 +476,8 @@ fn discover_verovio_source() -> Result<PathBuf, String> {
     // Priority 2: Local submodule path
     let manifest_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
     let submodule_path = manifest_dir.join("../../verovio");
-    if let Ok(canonical) = submodule_path.canonicalize() {
+    // Use dunce::canonicalize to avoid Windows \\?\ prefix that breaks MSVC
+    if let Ok(canonical) = dunce::canonicalize(&submodule_path) {
         if canonical.join("src").exists() {
             println!(
                 "cargo:warning=Using Verovio source from local submodule: {}",
