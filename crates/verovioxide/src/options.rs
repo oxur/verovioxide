@@ -15,6 +15,20 @@
 //!     .adjust_page_height(true)
 //!     .build();
 //! ```
+//!
+//! # Performance
+//!
+//! Building and serializing options is lightweight. However, when options are applied
+//! to a toolkit with [`Toolkit::set_options`](crate::Toolkit::set_options), certain
+//! options may trigger a re-layout of any loaded document:
+//!
+//! - **Layout-affecting options**: `page_width`, `page_height`, `page_margin*`,
+//!   `breaks`, `spacing_*`, `scale`, `adjust_page_height`
+//! - **Rendering-only options**: `font`, `svg_*`, `midi_*` - these don't require
+//!   re-layout
+//!
+//! For best performance, set layout-affecting options before loading data, or batch
+//! option changes together to minimize layout recalculations.
 
 use serde::{Deserialize, Serialize};
 
@@ -104,6 +118,11 @@ impl TextFont {
 ///
 /// All fields use `Option` to allow partial configuration. When serialized to JSON,
 /// only set fields are included, letting Verovio use its defaults for unset values.
+///
+/// # See also
+///
+/// - [`OptionsBuilder`] - Builder for constructing options
+/// - [`Toolkit::set_options`](crate::Toolkit::set_options) - Apply options to a toolkit
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Options {
@@ -289,6 +308,11 @@ pub struct Options {
 
 impl Options {
     /// Creates a new builder for constructing options.
+    ///
+    /// # See also
+    ///
+    /// - [`OptionsBuilder`] - The builder type
+    /// - [`OptionsBuilder::build`] - Finalize the builder into [`Options`]
     #[must_use]
     pub fn builder() -> OptionsBuilder {
         OptionsBuilder::default()
@@ -316,6 +340,11 @@ impl Options {
 /// Builder for constructing [`Options`].
 ///
 /// Use [`Options::builder()`] to create a new builder.
+///
+/// # See also
+///
+/// - [`Options`] - The options type this builds
+/// - [`Options::builder`] - Create a new builder
 #[derive(Debug, Default, Clone)]
 pub struct OptionsBuilder {
     options: Options,
@@ -355,6 +384,12 @@ impl OptionsBuilder {
     }
 
     /// Sets the page margin for all sides in MEI units.
+    ///
+    /// # See also
+    ///
+    /// - [`page_margin_top`](Self::page_margin_top), [`page_margin_bottom`](Self::page_margin_bottom),
+    ///   [`page_margin_left`](Self::page_margin_left), [`page_margin_right`](Self::page_margin_right) -
+    ///   Set individual margins
     #[must_use]
     pub fn page_margin(mut self, margin: u32) -> Self {
         self.options.page_margin = Some(margin);
@@ -362,6 +397,10 @@ impl OptionsBuilder {
     }
 
     /// Sets the top page margin in MEI units.
+    ///
+    /// # See also
+    ///
+    /// - [`page_margin`](Self::page_margin) - Set all margins at once
     #[must_use]
     pub fn page_margin_top(mut self, margin: u32) -> Self {
         self.options.page_margin_top = Some(margin);
@@ -369,6 +408,10 @@ impl OptionsBuilder {
     }
 
     /// Sets the bottom page margin in MEI units.
+    ///
+    /// # See also
+    ///
+    /// - [`page_margin`](Self::page_margin) - Set all margins at once
     #[must_use]
     pub fn page_margin_bottom(mut self, margin: u32) -> Self {
         self.options.page_margin_bottom = Some(margin);
@@ -376,6 +419,10 @@ impl OptionsBuilder {
     }
 
     /// Sets the left page margin in MEI units.
+    ///
+    /// # See also
+    ///
+    /// - [`page_margin`](Self::page_margin) - Set all margins at once
     #[must_use]
     pub fn page_margin_left(mut self, margin: u32) -> Self {
         self.options.page_margin_left = Some(margin);
@@ -383,6 +430,10 @@ impl OptionsBuilder {
     }
 
     /// Sets the right page margin in MEI units.
+    ///
+    /// # See also
+    ///
+    /// - [`page_margin`](Self::page_margin) - Set all margins at once
     #[must_use]
     pub fn page_margin_right(mut self, margin: u32) -> Self {
         self.options.page_margin_right = Some(margin);
@@ -593,6 +644,11 @@ impl OptionsBuilder {
     }
 
     /// Builds the options.
+    ///
+    /// # See also
+    ///
+    /// - [`Options`] - The resulting options type
+    /// - [`Toolkit::set_options`](crate::Toolkit::set_options) - Apply options to a toolkit
     #[must_use]
     pub fn build(self) -> Options {
         self.options

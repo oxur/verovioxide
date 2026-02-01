@@ -103,6 +103,15 @@ impl Toolkit {
     /// directory and initializes the toolkit to use them. The temporary directory
     /// is automatically cleaned up when the toolkit is dropped.
     ///
+    /// # Performance
+    ///
+    /// This operation extracts bundled resources (fonts, symbols) to a temporary
+    /// directory on disk, which involves I/O operations. The extraction typically
+    /// takes a few hundred milliseconds depending on disk speed. For applications
+    /// that create multiple toolkits, consider reusing a single toolkit instance
+    /// when possible, or use [`with_resource_path`](Self::with_resource_path) with
+    /// a pre-extracted resource directory.
+    ///
     /// # Errors
     ///
     /// Returns an error if:
@@ -233,6 +242,15 @@ impl Toolkit {
     /// - Plaine & Easie Code (PAE)
     /// - ABC notation
     ///
+    /// # Performance
+    ///
+    /// Parsing time scales with document complexity. Simple scores parse in
+    /// milliseconds, while complex orchestral works with many pages may take
+    /// several hundred milliseconds. The parsing also performs initial layout
+    /// calculations. For repeated rendering of the same document with different
+    /// options, load once and call [`set_options`](Self::set_options) followed
+    /// by [`redo_layout`](Self::redo_layout) rather than reloading.
+    ///
     /// # Arguments
     ///
     /// * `data` - The music data as a string
@@ -253,6 +271,10 @@ impl Toolkit {
     /// let mei = r#"<mei xmlns="http://www.music-encoding.org/ns/mei">...</mei>"#;
     /// toolkit.load_data(mei).expect("Failed to load data");
     /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`load_file`](Self::load_file) - Load music data from a file
     pub fn load_data(&mut self, data: &str) -> Result<()> {
         let c_data = CString::new(data)?;
 
@@ -271,6 +293,14 @@ impl Toolkit {
     /// Loads music data from a file.
     ///
     /// The file format is auto-detected based on content.
+    ///
+    /// # Performance
+    ///
+    /// This method reads the entire file into memory and then parses it.
+    /// Performance characteristics are similar to [`load_data`](Self::load_data),
+    /// plus file I/O overhead. For large files, consider whether the file needs
+    /// to be read from disk each time, or if caching the file content in memory
+    /// would be beneficial.
     ///
     /// # Arguments
     ///
@@ -292,6 +322,10 @@ impl Toolkit {
     /// let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
     /// toolkit.load_file(Path::new("score.mei")).expect("Failed to load file");
     /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`load_data`](Self::load_data) - Load music data from a string
     pub fn load_file(&mut self, path: &Path) -> Result<()> {
         if !path.exists() {
             return Err(Error::FileNotFound(path.to_path_buf()));
@@ -321,6 +355,18 @@ impl Toolkit {
     /// Page numbers are 1-based. Use [`page_count()`](Self::page_count) to get the
     /// total number of pages.
     ///
+    /// # Performance
+    ///
+    /// SVG rendering is CPU-intensive, involving glyph lookup, path generation,
+    /// and string formatting. Rendering time scales with page complexity (number
+    /// of notes, staves, and annotations). For applications that render the same
+    /// page multiple times (e.g., with different highlighting), consider caching
+    /// the base SVG and applying modifications to the cached result.
+    ///
+    /// If you need to render multiple pages, calling this method in a loop is
+    /// efficient as the layout is already computed. For parallel rendering of
+    /// different documents, create separate [`Toolkit`] instances.
+    ///
     /// # Arguments
     ///
     /// * `page` - The page number to render (1-based)
@@ -343,6 +389,12 @@ impl Toolkit {
     /// let svg = toolkit.render_to_svg(1).expect("Failed to render");
     /// println!("{}", svg);
     /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`render_to_svg_with_declaration`](Self::render_to_svg_with_declaration) - Include XML declaration
+    /// - [`render_all_pages`](Self::render_all_pages) - Render all pages at once
+    /// - [`page_count`](Self::page_count) - Get the total number of pages
     pub fn render_to_svg(&self, page: u32) -> Result<String> {
         let page_count = self.page_count();
         if page == 0 || page > page_count {
@@ -372,6 +424,11 @@ impl Toolkit {
     /// # Errors
     ///
     /// Returns an error if rendering fails.
+    ///
+    /// # See also
+    ///
+    /// - [`render_to_svg`](Self::render_to_svg) - Render without XML declaration
+    /// - [`render_all_pages`](Self::render_all_pages) - Render all pages at once
     pub fn render_to_svg_with_declaration(&self, page: u32) -> Result<String> {
         let page_count = self.page_count();
         if page == 0 || page > page_count {
@@ -390,6 +447,17 @@ impl Toolkit {
     }
 
     /// Renders all pages to SVG.
+    ///
+    /// # Performance
+    ///
+    /// This method renders pages sequentially. For a document with N pages,
+    /// the total time is approximately N times the single-page render time.
+    /// The method pre-allocates the result vector to avoid reallocations.
+    ///
+    /// For parallel rendering of the same document, you would need to create
+    /// multiple [`Toolkit`] instances, each with its own copy of the loaded
+    /// data. However, for most use cases, sequential rendering is sufficient
+    /// and avoids the overhead of multiple toolkit instances.
     ///
     /// # Errors
     ///
@@ -410,6 +478,11 @@ impl Toolkit {
     ///     println!("Page {}: {} bytes", i + 1, svg.len());
     /// }
     /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`render_to_svg`](Self::render_to_svg) - Render a single page
+    /// - [`page_count`](Self::page_count) - Get the total number of pages
     pub fn render_all_pages(&self) -> Result<Vec<String>> {
         let count = self.page_count();
         let mut pages = Vec::with_capacity(count as usize);
@@ -435,6 +508,11 @@ impl Toolkit {
     ///
     /// println!("Document has {} pages", toolkit.page_count());
     /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`render_to_svg`](Self::render_to_svg) - Render a specific page
+    /// - [`render_all_pages`](Self::render_all_pages) - Render all pages at once
     #[must_use]
     pub fn page_count(&self) -> u32 {
         // SAFETY: ptr is valid
@@ -446,6 +524,16 @@ impl Toolkit {
     ///
     /// Options are merged with existing options. To reset to defaults, use
     /// [`reset_options()`](Self::reset_options) first.
+    ///
+    /// # Performance
+    ///
+    /// Setting options is a lightweight operation that only stores configuration
+    /// values. However, if a document is already loaded, certain option changes
+    /// (such as page dimensions, margins, or break modes) will require a layout
+    /// recalculation on the next render. For best performance when experimenting
+    /// with different options, set all desired options before loading data, or
+    /// call [`redo_layout`](Self::redo_layout) explicitly after changing layout-
+    /// affecting options.
     ///
     /// # Arguments
     ///
@@ -471,6 +559,13 @@ impl Toolkit {
     ///
     /// toolkit.set_options(&options).expect("Failed to set options");
     /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`get_options`](Self::get_options) - Get current options as JSON
+    /// - [`reset_options`](Self::reset_options) - Reset to default options
+    /// - [`get_default_options`](Self::get_default_options) - Get default options as JSON
+    /// - [`Options`] - The options type
     pub fn set_options(&mut self, options: &Options) -> Result<()> {
         let json = options
             .to_json()
@@ -499,6 +594,13 @@ impl Toolkit {
     /// let options_json = toolkit.get_options();
     /// println!("Current options: {}", options_json);
     /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`set_options`](Self::set_options) - Set rendering options
+    /// - [`reset_options`](Self::reset_options) - Reset to default options
+    /// - [`get_default_options`](Self::get_default_options) - Get default options as JSON
+    /// - [`get_available_options`](Self::get_available_options) - Get all available options
     #[must_use]
     pub fn get_options(&self) -> String {
         // SAFETY: ptr is valid
@@ -517,6 +619,12 @@ impl Toolkit {
     /// let defaults = toolkit.get_default_options();
     /// println!("Default options: {}", defaults);
     /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`set_options`](Self::set_options) - Set rendering options
+    /// - [`get_options`](Self::get_options) - Get current options as JSON
+    /// - [`reset_options`](Self::reset_options) - Reset to default options
     #[must_use]
     pub fn get_default_options(&self) -> String {
         // SAFETY: ptr is valid
@@ -535,6 +643,12 @@ impl Toolkit {
     /// let available = toolkit.get_available_options();
     /// println!("Available options: {}", available);
     /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`set_options`](Self::set_options) - Set rendering options
+    /// - [`get_options`](Self::get_options) - Get current options as JSON
+    /// - [`get_default_options`](Self::get_default_options) - Get default options as JSON
     #[must_use]
     pub fn get_available_options(&self) -> String {
         // SAFETY: ptr is valid
@@ -552,6 +666,12 @@ impl Toolkit {
     /// let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
     /// toolkit.reset_options();
     /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`set_options`](Self::set_options) - Set rendering options
+    /// - [`get_options`](Self::get_options) - Get current options as JSON
+    /// - [`get_default_options`](Self::get_default_options) - Get default options as JSON
     pub fn reset_options(&mut self) {
         // SAFETY: ptr is valid
         unsafe { verovioxide_sys::vrvToolkit_resetOptions(self.ptr) };
@@ -616,6 +736,13 @@ impl Toolkit {
     /// let mei = toolkit.get_mei().expect("Failed to export MEI");
     /// println!("{}", mei);
     /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`get_mei_with_options`](Self::get_mei_with_options) - Export with custom options
+    /// - [`get_humdrum`](Self::get_humdrum) - Export as Humdrum
+    /// - [`render_to_pae`](Self::render_to_pae) - Export as Plaine & Easie
+    /// - [`render_to_midi`](Self::render_to_midi) - Export as MIDI
     pub fn get_mei(&self) -> Result<String> {
         self.get_mei_with_options("{}")
     }
@@ -629,6 +756,10 @@ impl Toolkit {
     /// # Errors
     ///
     /// Returns an error if no document is loaded or export fails.
+    ///
+    /// # See also
+    ///
+    /// - [`get_mei`](Self::get_mei) - Export with default options
     pub fn get_mei_with_options(&self, options: &str) -> Result<String> {
         let c_options = CString::new(options)?;
 
@@ -644,6 +775,12 @@ impl Toolkit {
     /// # Errors
     ///
     /// Returns an error if no document is loaded or export fails.
+    ///
+    /// # See also
+    ///
+    /// - [`get_mei`](Self::get_mei) - Export as MEI
+    /// - [`render_to_pae`](Self::render_to_pae) - Export as Plaine & Easie
+    /// - [`render_to_midi`](Self::render_to_midi) - Export as MIDI
     pub fn get_humdrum(&self) -> Result<String> {
         // SAFETY: ptr is valid
         let humdrum_ptr = unsafe { verovioxide_sys::vrvToolkit_getHumdrum(self.ptr) };
@@ -654,9 +791,23 @@ impl Toolkit {
 
     /// Renders the loaded document to MIDI as base64-encoded data.
     ///
+    /// # Performance
+    ///
+    /// MIDI generation traverses the entire score to extract timing and pitch
+    /// information, then base64-encodes the binary MIDI data. For large scores,
+    /// the base64 encoding adds a small overhead. The returned string is
+    /// approximately 33% larger than the raw MIDI binary data.
+    ///
     /// # Errors
     ///
     /// Returns an error if no document is loaded or rendering fails.
+    ///
+    /// # See also
+    ///
+    /// - [`get_mei`](Self::get_mei) - Export as MEI
+    /// - [`get_humdrum`](Self::get_humdrum) - Export as Humdrum
+    /// - [`render_to_pae`](Self::render_to_pae) - Export as Plaine & Easie
+    /// - [`render_to_timemap`](Self::render_to_timemap) - Get timing information
     pub fn render_to_midi(&self) -> Result<String> {
         if self.page_count() == 0 {
             return Err(Error::RenderError("no data loaded".into()));
@@ -674,6 +825,12 @@ impl Toolkit {
     /// # Errors
     ///
     /// Returns an error if no document is loaded or rendering fails.
+    ///
+    /// # See also
+    ///
+    /// - [`get_mei`](Self::get_mei) - Export as MEI
+    /// - [`get_humdrum`](Self::get_humdrum) - Export as Humdrum
+    /// - [`render_to_midi`](Self::render_to_midi) - Export as MIDI
     pub fn render_to_pae(&self) -> Result<String> {
         if self.page_count() == 0 {
             return Err(Error::RenderError("no data loaded".into()));
@@ -688,9 +845,19 @@ impl Toolkit {
 
     /// Gets the timemap as JSON.
     ///
+    /// The timemap provides timing information for elements in the score,
+    /// mapping musical time to milliseconds.
+    ///
     /// # Errors
     ///
     /// Returns an error if no document is loaded or export fails.
+    ///
+    /// # See also
+    ///
+    /// - [`render_to_timemap_with_options`](Self::render_to_timemap_with_options) - Get timemap with custom options
+    /// - [`get_elements_at_time`](Self::get_elements_at_time) - Get elements at a specific time
+    /// - [`get_time_for_element`](Self::get_time_for_element) - Get time for a specific element
+    /// - [`render_to_midi`](Self::render_to_midi) - Export as MIDI (includes timing)
     pub fn render_to_timemap(&self) -> Result<String> {
         self.render_to_timemap_with_options("{}")
     }
@@ -704,6 +871,12 @@ impl Toolkit {
     /// # Errors
     ///
     /// Returns an error if no document is loaded or export fails.
+    ///
+    /// # See also
+    ///
+    /// - [`render_to_timemap`](Self::render_to_timemap) - Get timemap with default options
+    /// - [`get_elements_at_time`](Self::get_elements_at_time) - Get elements at a specific time
+    /// - [`get_time_for_element`](Self::get_time_for_element) - Get time for a specific element
     pub fn render_to_timemap_with_options(&self, options: &str) -> Result<String> {
         let c_options = CString::new(options)?;
 
@@ -729,6 +902,21 @@ impl Toolkit {
     }
 
     /// Gets the current rendering scale as a percentage.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    ///
+    /// let toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// let scale = toolkit.get_scale();
+    /// println!("Current scale: {}%", scale);
+    ///
+    /// // The scale affects the rendered output size
+    /// if scale < 100 {
+    ///     println!("Rendering at reduced size");
+    /// }
+    /// ```
     #[must_use]
     pub fn get_scale(&self) -> i32 {
         // SAFETY: ptr is valid
@@ -756,6 +944,18 @@ impl Toolkit {
     }
 
     /// Gets the toolkit instance ID.
+    ///
+    /// Each toolkit instance has a unique identifier assigned by Verovio.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    ///
+    /// let toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// let id = toolkit.get_id();
+    /// println!("Toolkit ID: {}", id);
+    /// ```
     #[must_use]
     pub fn get_id(&self) -> String {
         // SAFETY: ptr is valid
@@ -764,6 +964,18 @@ impl Toolkit {
     }
 
     /// Gets the current resource path.
+    ///
+    /// Returns the path to the directory containing Verovio resources (fonts, etc.).
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    ///
+    /// let toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// let path = toolkit.get_resource_path();
+    /// println!("Resources located at: {}", path);
+    /// ```
     #[must_use]
     pub fn get_resource_path(&self) -> String {
         // SAFETY: ptr is valid
@@ -807,6 +1019,22 @@ impl Toolkit {
     /// # Returns
     ///
     /// The page number (1-based), or 0 if the element is not found.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    ///
+    /// let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// // ... load MEI data ...
+    ///
+    /// let page = toolkit.get_page_with_element("note-0001").expect("Failed to get page");
+    /// if page > 0 {
+    ///     println!("Element is on page {}", page);
+    /// } else {
+    ///     println!("Element not found");
+    /// }
+    /// ```
     pub fn get_page_with_element(&self, xml_id: &str) -> Result<u32> {
         let c_id = CString::new(xml_id)?;
 
@@ -826,6 +1054,18 @@ impl Toolkit {
     /// # Returns
     ///
     /// A JSON string with the element's attributes.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    ///
+    /// let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// // ... load MEI data with elements having xml:id attributes ...
+    ///
+    /// let attrs = toolkit.get_element_attr("note-0001").expect("Failed to get attributes");
+    /// println!("Note attributes: {}", attrs);
+    /// ```
     pub fn get_element_attr(&self, xml_id: &str) -> Result<String> {
         let c_id = CString::new(xml_id)?;
 
@@ -847,6 +1087,11 @@ impl Toolkit {
     /// # Returns
     ///
     /// A JSON string with the element IDs at the specified time.
+    ///
+    /// # See also
+    ///
+    /// - [`get_time_for_element`](Self::get_time_for_element) - Get time for a specific element
+    /// - [`render_to_timemap`](Self::render_to_timemap) - Get the full timemap
     pub fn get_elements_at_time(&self, millisec: i32) -> Result<String> {
         // SAFETY: ptr is valid
         let elements_ptr =
@@ -866,6 +1111,11 @@ impl Toolkit {
     /// # Returns
     ///
     /// The time in milliseconds.
+    ///
+    /// # See also
+    ///
+    /// - [`get_elements_at_time`](Self::get_elements_at_time) - Get elements at a specific time
+    /// - [`render_to_timemap`](Self::render_to_timemap) - Get the full timemap
     pub fn get_time_for_element(&self, xml_id: &str) -> Result<f64> {
         let c_id = CString::new(xml_id)?;
 
@@ -913,6 +1163,21 @@ impl Toolkit {
     }
 
     /// Gets information about the last edit operation.
+    ///
+    /// Returns a JSON string containing details about the most recent edit
+    /// performed via [`edit()`](Self::edit).
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    ///
+    /// let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// // ... load data and perform an edit ...
+    ///
+    /// let info = toolkit.edit_info();
+    /// println!("Last edit info: {}", info);
+    /// ```
     #[must_use]
     pub fn edit_info(&self) -> String {
         // SAFETY: ptr is valid

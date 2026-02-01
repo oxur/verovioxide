@@ -124,6 +124,137 @@
 //!
 //! For advanced use cases, the raw FFI bindings are available in the
 //! [`verovioxide-sys`](https://docs.rs/verovioxide-sys) crate.
+//!
+//! # Architecture
+//!
+//! Verovioxide is organized as a layered crate structure, with each layer providing
+//! a specific level of abstraction:
+//!
+//! ```text
+//! ┌─────────────────────────────────────────────────────────────────┐
+//! │                        verovioxide                              │
+//! │      (safe Rust API: Toolkit, Options, Error)                   │
+//! └───────────────────────────┬─────────────────────────────────────┘
+//!                             │ uses
+//! ┌───────────────────────────┴─────────────────────────────────────┐
+//! │                      verovioxide-sys                            │
+//! │        (unsafe FFI bindings to Verovio C API)                   │
+//! └───────────────────────────┬─────────────────────────────────────┘
+//!                             │ links to
+//! ┌───────────────────────────┴─────────────────────────────────────┐
+//! │                        Verovio (C++)                            │
+//! │    (music notation engraving library, statically linked)        │
+//! └─────────────────────────────────────────────────────────────────┘
+//!
+//! ┌─────────────────────────────────────────────────────────────────┐
+//! │                     verovioxide-data                            │
+//! │      (embedded SMuFL fonts and Verovio resources)               │
+//! └─────────────────────────────────────────────────────────────────┘
+//! ```
+//!
+//! ## Data Flow
+//!
+//! The typical data flow through verovioxide follows this pattern:
+//!
+//! 1. **Input**: Music notation in various formats (MusicXML, MEI, ABC, Humdrum,
+//!    Plaine & Easie) is loaded via [`Toolkit::load_data`] or [`Toolkit::load_file`].
+//!
+//! 2. **Processing**: Verovio parses the input, builds an internal representation,
+//!    and lays out the music notation according to the configured [`Options`].
+//!
+//! 3. **Output**: The processed music is rendered or exported via methods like:
+//!    - [`Toolkit::render_to_svg`] - Render to SVG graphics
+//!    - [`Toolkit::get_mei`] - Export as MEI XML
+//!    - [`Toolkit::render_to_midi`] - Export as MIDI (base64-encoded)
+//!    - [`Toolkit::get_humdrum`] - Export as Humdrum
+//!
+//! ## Resource Management
+//!
+//! When created with [`Toolkit::new()`], the toolkit automatically:
+//!
+//! 1. Extracts bundled SMuFL fonts and Verovio resources from the embedded data
+//!    (compiled into the binary via `verovioxide-data`) to a temporary directory.
+//!
+//! 2. Initializes the underlying Verovio C++ toolkit with the path to these
+//!    extracted resources.
+//!
+//! 3. When the [`Toolkit`] is dropped, the temporary directory and all extracted
+//!    files are automatically cleaned up.
+//!
+//! For applications that need to avoid this extraction overhead (e.g., creating
+//! many toolkit instances), use [`Toolkit::with_resource_path`] with a
+//! pre-extracted directory, or [`Toolkit::without_resources`] for operations
+//! that do not require font rendering.
+//!
+//! ## Thread Safety Model
+//!
+//! [`Toolkit`] implements [`Send`] but not [`Sync`]:
+//!
+//! - **Send**: A toolkit can be moved between threads. This is safe because
+//!   each toolkit owns its Verovio instance exclusively.
+//!
+//! - **Not Sync**: A toolkit cannot be shared between threads via references.
+//!   The underlying Verovio C++ code maintains internal mutable state that is
+//!   not thread-safe to access concurrently.
+//!
+//! For parallel rendering scenarios:
+//!
+//! - Create a separate [`Toolkit`] instance for each thread.
+//! - Each toolkit must load its own copy of the document.
+//! - Consider using [`Toolkit::with_resource_path`] with a shared pre-extracted
+//!   resource directory to avoid redundant extraction overhead.
+//!
+//! # Performance Considerations
+//!
+//! Understanding the performance characteristics of verovioxide helps you write
+//! efficient applications:
+//!
+//! ## Toolkit Creation
+//!
+//! [`Toolkit::new()`] extracts bundled resources (fonts, symbols) to a temporary
+//! directory. This involves disk I/O and typically takes a few hundred milliseconds.
+//! For better performance:
+//!
+//! - **Reuse toolkit instances** when rendering multiple documents
+//! - **Use [`Toolkit::with_resource_path()`]** with a pre-extracted directory
+//!   if you need to create many toolkit instances
+//! - **Use [`Toolkit::without_resources()`]** for operations that don't require
+//!   font rendering (e.g., format conversion, metadata extraction)
+//!
+//! ## Document Loading and Parsing
+//!
+//! Parsing time scales with document complexity. Simple scores parse in milliseconds;
+//! complex orchestral works may take longer. Tips:
+//!
+//! - **Load once, render many**: After loading a document, you can render pages
+//!   and change options without reloading
+//! - **Use [`redo_layout()`](Toolkit::redo_layout)** instead of reloading when
+//!   changing layout-affecting options
+//!
+//! ## Rendering
+//!
+//! SVG rendering is CPU-intensive. Each page renders independently, so:
+//!
+//! - **Cache rendered SVGs** if you display the same page multiple times
+//! - **Render on demand** rather than pre-rendering all pages for large documents
+//! - **Consider lower scale values** for preview rendering
+//!
+//! ## Concurrent Rendering
+//!
+//! Each [`Toolkit`] instance has its own internal state and is `Send` but not `Sync`.
+//! For concurrent rendering:
+//!
+//! - **Create separate toolkit instances** for each thread
+//! - **Each instance needs its own loaded document copy**
+//! - For rendering different pages of the same document concurrently, you would
+//!   need multiple toolkits each with the document loaded
+//!
+//! ## Memory Usage
+//!
+//! - Toolkit instances hold parsed document state in memory
+//! - Large documents with many pages consume more memory
+//! - SVG output strings can be large; consider streaming to files for big documents
+//! - Dropping a toolkit releases all associated memory and temporary files
 
 mod error;
 mod options;

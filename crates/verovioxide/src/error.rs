@@ -10,6 +10,10 @@ use std::path::PathBuf;
 pub type Result<T> = std::result::Result<T, Error>;
 
 /// Errors that can occur when using the verovioxide library.
+///
+/// # See also
+///
+/// - [`Result`] - The result type alias using this error
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// Failed to initialize the Verovio toolkit.
@@ -17,6 +21,12 @@ pub enum Error {
     /// This typically occurs when:
     /// - Memory allocation fails
     /// - Resource initialization fails
+    ///
+    /// # Returned by
+    ///
+    /// - [`Toolkit::new`](crate::Toolkit::new)
+    /// - [`Toolkit::with_resource_path`](crate::Toolkit::with_resource_path)
+    /// - [`Toolkit::without_resources`](crate::Toolkit::without_resources)
     #[error("failed to initialize toolkit: {0}")]
     InitializationError(String),
 
@@ -26,6 +36,11 @@ pub enum Error {
     /// - The input data is malformed
     /// - The input format is not recognized
     /// - The file cannot be read
+    ///
+    /// # Returned by
+    ///
+    /// - [`Toolkit::load_data`](crate::Toolkit::load_data)
+    /// - [`Toolkit::load_file`](crate::Toolkit::load_file)
     #[error("failed to load data: {0}")]
     LoadError(String),
 
@@ -35,6 +50,16 @@ pub enum Error {
     /// - No data has been loaded
     /// - The page number is out of range
     /// - Internal rendering error occurs
+    ///
+    /// # Returned by
+    ///
+    /// - [`Toolkit::render_to_svg`](crate::Toolkit::render_to_svg)
+    /// - [`Toolkit::render_to_svg_with_declaration`](crate::Toolkit::render_to_svg_with_declaration)
+    /// - [`Toolkit::render_all_pages`](crate::Toolkit::render_all_pages)
+    /// - [`Toolkit::render_to_midi`](crate::Toolkit::render_to_midi)
+    /// - [`Toolkit::render_to_pae`](crate::Toolkit::render_to_pae)
+    /// - [`Toolkit::get_mei`](crate::Toolkit::get_mei)
+    /// - [`Toolkit::get_humdrum`](crate::Toolkit::get_humdrum)
     #[error("failed to render: {0}")]
     RenderError(String),
 
@@ -44,12 +69,22 @@ pub enum Error {
     /// - Option values are out of valid range
     /// - JSON serialization fails
     /// - Unknown option keys are provided
+    ///
+    /// # Returned by
+    ///
+    /// - [`Toolkit::set_options`](crate::Toolkit::set_options)
+    /// - [`Toolkit::set_scale`](crate::Toolkit::set_scale)
+    /// - [`Toolkit::set_resource_path`](crate::Toolkit::set_resource_path)
     #[error("invalid options: {0}")]
     OptionsError(String),
 
     /// Failed to work with resource files.
     ///
     /// This variant is only available when the `bundled-data` feature is enabled.
+    ///
+    /// # Returned by
+    ///
+    /// - [`Toolkit::new`](crate::Toolkit::new) (when extracting bundled resources)
     #[cfg(feature = "bundled-data")]
     #[error("resource error: {0}")]
     ResourceError(#[from] verovioxide_data::DataError),
@@ -64,6 +99,10 @@ pub enum Error {
     IoError(#[from] std::io::Error),
 
     /// The requested file was not found.
+    ///
+    /// # Returned by
+    ///
+    /// - [`Toolkit::load_file`](crate::Toolkit::load_file)
     #[error("file not found: {}", .0.display())]
     FileNotFound(PathBuf),
 
@@ -72,6 +111,9 @@ pub enum Error {
     InvalidUtf8,
 
     /// A string contained a null byte.
+    ///
+    /// This occurs when passing strings with embedded null bytes to Verovio,
+    /// which expects null-terminated C strings.
     #[error("string contains null byte")]
     NullByteInString(#[from] std::ffi::NulError),
 }

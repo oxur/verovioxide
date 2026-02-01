@@ -94,11 +94,10 @@ pub enum DataError {
 ///     println!("File: {}", file.path().display());
 /// }
 ///
-/// // Access a specific file
-/// if let Some(file) = dir.get_file("Bravura.xml") {
-///     let contents = file.contents_utf8().unwrap();
-///     println!("Loaded {} bytes", contents.len());
-/// }
+/// // Access a specific file - Bravura.xml is always included
+/// let file = dir.get_file("Bravura.xml").expect("Bravura.xml should exist");
+/// let contents = file.contents_utf8().expect("Should be valid UTF-8");
+/// assert!(contents.len() > 0);
 /// ```
 #[must_use]
 pub fn resource_dir() -> &'static Dir<'static> {
@@ -211,7 +210,10 @@ pub const fn has_petaluma() -> bool {
 /// use verovioxide_data::available_fonts;
 ///
 /// let fonts = available_fonts();
-/// assert!(fonts.contains(&"Bravura")); // Always included
+/// // Bravura is always included as the baseline font
+/// assert!(fonts.contains(&"Bravura"));
+/// // Should have at least one font
+/// assert!(!fonts.is_empty());
 /// ```
 #[must_use]
 pub fn available_fonts() -> Vec<&'static str> {
