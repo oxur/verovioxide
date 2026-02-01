@@ -197,16 +197,16 @@ fn verify_sha256(path: &std::path::Path, expected_hash: &str) -> Result<HashVeri
     if actual_hash == expected_hash {
         Ok(HashVerification::Match)
     } else {
-        Ok(HashVerification::Mismatch { actual: actual_hash })
+        Ok(HashVerification::Mismatch {
+            actual: actual_hash,
+        })
     }
 }
 
 /// Downloads a file from a URL to a destination path.
 fn download_file(url: &str, dest: &std::path::Path) -> Result<(), String> {
     println!("cargo:warning=Downloading Verovio source from: {}", url);
-    println!(
-        "cargo:warning=This may take a moment on first build..."
-    );
+    println!("cargo:warning=This may take a moment on first build...");
 
     let response = ureq::get(url)
         .call()
@@ -230,9 +230,12 @@ fn download_file(url: &str, dest: &std::path::Path) -> Result<(), String> {
 }
 
 /// Extracts a gzipped tarball to a destination directory.
-fn extract_tarball(tarball_path: &std::path::Path, dest_dir: &std::path::Path) -> Result<(), String> {
-    let file = std::fs::File::open(tarball_path)
-        .map_err(|e| format!("Failed to open tarball: {}", e))?;
+fn extract_tarball(
+    tarball_path: &std::path::Path,
+    dest_dir: &std::path::Path,
+) -> Result<(), String> {
+    let file =
+        std::fs::File::open(tarball_path).map_err(|e| format!("Failed to open tarball: {}", e))?;
 
     let gz_decoder = flate2::read::GzDecoder::new(file);
     let mut archive = tar::Archive::new(gz_decoder);

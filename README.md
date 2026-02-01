@@ -355,7 +355,24 @@ cargo run --example render_abc
 ### Render All Pages
 
 ```bash
-cargo run --example render_all_pages -- score.mei output-dir/
+mkdir output-dir
+cargo run --example render_all_pages -- \
+  "examples/Goldberg-Variationen-1-and-2.musicxml" \
+  output-dir/
+```
+
+```
+Creating Verovio toolkit with bundled resources...
+Verovio version: 5.7.0
+Setting page dimensions: width=2100, height=2970 (A4-like)
+Loading file: examples/Goldberg-Variationen-1-and-2.musicxml (format auto-detected)
+[Warning] MusicXML import: Dangling ending tag skipped
+Document loaded successfully. Total pages: 3
+Rendering 3 pages...
+  Page 1/3: output-dir/-001.svg (380226 bytes)
+  Page 2/3: output-dir/-002.svg (424047 bytes)
+  Page 3/3: output-dir/-003.svg (121350 bytes)
+Done! Rendered 3 pages.
 ```
 
 ## Crate Structure
