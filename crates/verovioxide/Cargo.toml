@@ -6,7 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "Safe Rust bindings to the Verovio music notation engraving library"
-keywords = ["mei", "music", "notation", "verovio"]
+keywords = ["mei", "music", "notation", "verovio", "musicxml", "scores", "engraving"]
 categories = ["multimedia::encoding", "parsing"]
 
 [features]
@@ -14,8 +14,8 @@ default = ["bundled-data"]
 bundled-data = ["verovioxide-data", "tempfile"]
 
 [dependencies]
-verovioxide-sys = { path = "../verovioxide-sys" }
-verovioxide-data = { path = "../verovioxide-data", optional = true }
+verovioxide-sys = { version = "0.1.0", path = "../verovioxide-sys" }
+verovioxide-data = { version = "0.1.0", path = "../verovioxide-data", optional = true }
 tempfile = { version = "3", optional = true }
 thiserror = "2"
 serde = { version = "1", features = ["derive"] }
