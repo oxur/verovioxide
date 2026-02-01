@@ -5,6 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+readme = "README.md"
 description = "Raw FFI bindings to the Verovio music engraving library"
 keywords = ["mei", "music", "notation", "verovio", "ffi"]
 categories = ["external-ffi-bindings"]

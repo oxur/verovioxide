@@ -5,6 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+readme = "README.md"
 description = "Bundled SMuFL fonts and resources for verovioxide"
 keywords = ["mei", "music", "notation", "verovio", "smufl"]
 categories = ["multimedia::encoding"]
