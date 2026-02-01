@@ -24,6 +24,32 @@
 cargo add verovioxide
 ```
 
+The first build compiles the Verovio C++ library from source, which takes several minutes. Subsequent builds use cached artifacts and are fast.
+
+### Faster Builds with Prebuilt Binaries
+
+For faster initial builds, use the prebuilt feature which downloads a pre-compiled Verovio library:
+
+```bash
+cargo add verovioxide-sys --features prebuilt
+cargo add verovioxide
+```
+
+Or in your `Cargo.toml`:
+
+```toml
+[dependencies]
+verovioxide = "0.1"
+verovioxide-sys = { version = "0.1", features = ["prebuilt"] }
+```
+
+Prebuilt binaries are available for:
+- macOS (x86_64, aarch64)
+- Linux (x86_64, aarch64)
+- Windows (x86_64 MSVC)
+
+If prebuilt binaries aren't available for your platform, it automatically falls back to compiling from source.
+
 ## Quick Start
 
 ```rust
@@ -282,6 +308,8 @@ Format detection is automatic based on file content.
 
 ## Feature Flags
 
+### verovioxide
+
 | Feature | Default | Description |
 |---------|---------|-------------|
 | `bundled-data` | Yes | Include bundled SMuFL fonts and resources |
@@ -293,6 +321,16 @@ Format detection is automatic based on file content.
 | `all-fonts` | No | Enable all fonts |
 
 Note: Bravura baseline data is always included as it is required for Verovio's glyph name table.
+
+### verovioxide-sys
+
+| Feature | Default | Description |
+|---------|---------|-------------|
+| `bundled` | Yes | Compile Verovio C++ library from source |
+| `prebuilt` | No | Download pre-built library from GitHub releases (faster) |
+| `force-rebuild` | No | Force fresh compilation, bypassing cache |
+
+The `prebuilt` and `bundled` features can be used together - if prebuilt download fails, it falls back to compilation.
 
 ### Enable Additional Fonts
 
@@ -330,7 +368,23 @@ cargo build
 cargo test
 ```
 
-Note: First build compiles Verovio from source, which takes several minutes. Subsequent builds use cached artifacts.
+### Build Caching
+
+The Verovio C++ library is compiled once and cached at `target/verovio-cache/`. Subsequent builds link to the cached library and complete in seconds.
+
+To force a fresh recompilation:
+
+```bash
+cargo build --features force-rebuild
+```
+
+### Corporate/Restricted Networks
+
+If your network blocks GitHub downloads, you can provide a local Verovio source:
+
+```bash
+VEROVIO_SOURCE_DIR=/path/to/verovio cargo build
+```
 
 ## Examples
 
