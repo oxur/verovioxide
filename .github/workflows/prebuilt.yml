@@ -22,9 +22,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - target: x86_64-apple-darwin
-            os: macos-13
-            lib_name: libverovio.a
           - target: aarch64-apple-darwin
             os: macos-14
             lib_name: libverovio.a
