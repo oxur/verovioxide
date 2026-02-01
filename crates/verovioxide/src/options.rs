@@ -145,10 +145,6 @@ pub struct Options {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub adjust_page_height: Option<bool>,
 
-    /// Page margin for all sides (in MEI units).
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub page_margin: Option<u32>,
-
     /// Top page margin (in MEI units).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub page_margin_top: Option<u32>,
@@ -392,7 +388,10 @@ impl OptionsBuilder {
     ///   Set individual margins
     #[must_use]
     pub fn page_margin(mut self, margin: u32) -> Self {
-        self.options.page_margin = Some(margin);
+        self.options.page_margin_top = Some(margin);
+        self.options.page_margin_bottom = Some(margin);
+        self.options.page_margin_left = Some(margin);
+        self.options.page_margin_right = Some(margin);
         self
     }
 
@@ -814,6 +813,14 @@ mod tests {
 
     #[test]
     fn test_options_builder_margins() {
+        // Test that page_margin sets all four margins
+        let options = Options::builder().page_margin(50).build();
+        assert_eq!(options.page_margin_top, Some(50));
+        assert_eq!(options.page_margin_bottom, Some(50));
+        assert_eq!(options.page_margin_left, Some(50));
+        assert_eq!(options.page_margin_right, Some(50));
+
+        // Test that individual margins can override
         let options = Options::builder()
             .page_margin(50)
             .page_margin_top(100)
@@ -822,7 +829,6 @@ mod tests {
             .page_margin_right(75)
             .build();
 
-        assert_eq!(options.page_margin, Some(50));
         assert_eq!(options.page_margin_top, Some(100));
         assert_eq!(options.page_margin_bottom, Some(100));
         assert_eq!(options.page_margin_left, Some(75));
@@ -1306,8 +1312,10 @@ mod tests {
         assert!(json.contains("pageWidth"));
         assert!(json.contains("pageHeight"));
         assert!(json.contains("adjustPageHeight"));
-        assert!(json.contains("pageMargin"));
         assert!(json.contains("pageMarginTop"));
+        assert!(json.contains("pageMarginBottom"));
+        assert!(json.contains("pageMarginLeft"));
+        assert!(json.contains("pageMarginRight"));
         assert!(json.contains("lyricSize"));
         assert!(json.contains("condenseFirstPage"));
         assert!(json.contains("evenNoteSpacing"));
@@ -1357,7 +1365,10 @@ mod tests {
         assert_eq!(original.page_width, parsed.page_width);
         assert_eq!(original.page_height, parsed.page_height);
         assert_eq!(original.adjust_page_height, parsed.adjust_page_height);
-        assert_eq!(original.page_margin, parsed.page_margin);
+        assert_eq!(original.page_margin_top, parsed.page_margin_top);
+        assert_eq!(original.page_margin_bottom, parsed.page_margin_bottom);
+        assert_eq!(original.page_margin_left, parsed.page_margin_left);
+        assert_eq!(original.page_margin_right, parsed.page_margin_right);
         assert_eq!(original.lyric_size, parsed.lyric_size);
         assert_eq!(original.breaks, parsed.breaks);
         assert_eq!(original.condense, parsed.condense);
