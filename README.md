@@ -165,13 +165,13 @@ cargo run --example render_musicxml -- \
   simple.svg
 ```
 
-[![][simple-example]][simple-example]
+[![][simple-screenshot]][simple-screenshot]
 
 ```bash
 cargo run --example render_abc
 ```
 
-[![][twinkle-example]][twinkle-example]
+[![][twinkle-screenshot]][twinkle-screenshot]
 
 ## Crate Structure
 
@@ -201,3 +201,5 @@ This project is licensed under the Apache License 2.0.
 [tag-badge]: https://img.shields.io/github/tag/oxur/verovioxide.svg
 [tag]: https://github.com/oxur/verovioxide/tags
 
+[simple-screenshot]: assets/images/screenshots/simple-example.png
+[twinkle-screenshot]: assets/images/screenshots/twinkle-example.png
