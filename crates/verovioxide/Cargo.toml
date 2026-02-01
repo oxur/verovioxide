@@ -6,7 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "Safe Rust bindings to the Verovio music notation engraving library"
-keywords = ["mei", "music", "notation", "verovio", "musicxml", "scores", "engraving"]
+keywords = ["mei", "music", "notation", "verovio", "musicxml"]
 categories = ["multimedia::encoding", "parsing"]
 
 [features]
