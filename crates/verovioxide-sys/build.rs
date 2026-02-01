@@ -3,6 +3,15 @@
 //! This script compiles the Verovio C++ library from source using the `cc` crate.
 //! It handles platform-specific configuration and links the appropriate C++ standard library.
 //!
+//! # Source Discovery
+//!
+//! The build script looks for Verovio source code in the following order:
+//!
+//! 1. `VEROVIO_SOURCE_DIR` environment variable - for corporate/restricted networks
+//! 2. Local submodule at `../../verovio` - for development workflows
+//! 3. Cached download at `target/verovio-cache/verovio-source/` - for repeat builds
+//! 4. Download from GitHub release - for first-time crates.io users
+//!
 //! # Smart Caching
 //!
 //! To avoid recompiling Verovio (~6 minutes) on every Rust code change, this script
@@ -17,8 +26,31 @@
 //! The cache is stored in the workspace's `target/verovio-cache/` directory to persist
 //! across clean builds of individual crates while still being cleaned by `cargo clean`.
 
+use sha2::{Digest, Sha256};
 use std::io::Write;
 use std::path::PathBuf;
+
+/// Verovio version to download from GitHub.
+/// This must match the version in the project Makefile (VEROVIO_VERSION).
+const VEROVIO_VERSION: &str = "5.7.0";
+
+/// Expected SHA256 hash of the release tarball.
+/// This ensures integrity of downloaded sources and guards against supply chain attacks.
+///
+/// To compute/verify this hash, run:
+/// ```sh
+/// curl -sL https://github.com/rism-digital/verovio/archive/refs/tags/version-5.7.0.tar.gz | shasum -a 256
+/// ```
+const VEROVIO_TARBALL_SHA256: &str =
+    "bf7483504ddbf2d7ff59ae53b547e6347f89f82583559bf264d97b3624279d5e";
+
+/// GitHub release tarball URL.
+fn get_download_url() -> String {
+    format!(
+        "https://github.com/rism-digital/verovio/archive/refs/tags/version-{}.tar.gz",
+        VEROVIO_VERSION
+    )
+}
 
 /// Returns the path to the Verovio cache directory.
 ///
@@ -48,6 +80,11 @@ fn get_cached_library_path() -> PathBuf {
     } else {
         cache_dir.join("libverovio.a")
     }
+}
+
+/// Returns the path to the cached Verovio source directory.
+fn get_cached_source_dir() -> PathBuf {
+    get_cache_dir().join("verovio-source")
 }
 
 /// Checks if a cached Verovio library exists and should be used.
@@ -136,6 +173,194 @@ fn cache_compiled_library(out_dir: &std::path::Path) {
     }
 }
 
+/// Result of SHA256 verification.
+enum HashVerification {
+    /// Hash matches expected value.
+    Match,
+    /// Hash does not match; includes the actual hash for error reporting.
+    Mismatch { actual: String },
+}
+
+/// Verifies the SHA256 hash of a file matches the expected value.
+///
+/// Returns `HashVerification::Match` if the hash matches, or `HashVerification::Mismatch`
+/// with the actual hash if it doesn't (useful for error messages).
+fn verify_sha256(path: &std::path::Path, expected_hash: &str) -> Result<HashVerification, String> {
+    let data =
+        std::fs::read(path).map_err(|e| format!("Failed to read file for hashing: {}", e))?;
+
+    let mut hasher = Sha256::new();
+    hasher.update(&data);
+    let result = hasher.finalize();
+    let actual_hash = format!("{:x}", result);
+
+    if actual_hash == expected_hash {
+        Ok(HashVerification::Match)
+    } else {
+        Ok(HashVerification::Mismatch { actual: actual_hash })
+    }
+}
+
+/// Downloads a file from a URL to a destination path.
+fn download_file(url: &str, dest: &std::path::Path) -> Result<(), String> {
+    println!("cargo:warning=Downloading Verovio source from: {}", url);
+    println!(
+        "cargo:warning=This may take a moment on first build..."
+    );
+
+    let response = ureq::get(url)
+        .call()
+        .map_err(|e| format!("Failed to download Verovio source: {}", e))?;
+
+    if response.status() != 200 {
+        return Err(format!(
+            "HTTP error downloading Verovio source: status {}",
+            response.status()
+        ));
+    }
+
+    let mut reader = response.into_reader();
+    let mut data = Vec::new();
+    std::io::Read::read_to_end(&mut reader, &mut data)
+        .map_err(|e| format!("Failed to read download response: {}", e))?;
+
+    std::fs::write(dest, &data).map_err(|e| format!("Failed to write downloaded file: {}", e))?;
+
+    Ok(())
+}
+
+/// Extracts a gzipped tarball to a destination directory.
+fn extract_tarball(tarball_path: &std::path::Path, dest_dir: &std::path::Path) -> Result<(), String> {
+    let file = std::fs::File::open(tarball_path)
+        .map_err(|e| format!("Failed to open tarball: {}", e))?;
+
+    let gz_decoder = flate2::read::GzDecoder::new(file);
+    let mut archive = tar::Archive::new(gz_decoder);
+
+    archive
+        .unpack(dest_dir)
+        .map_err(|e| format!("Failed to extract tarball: {}", e))?;
+
+    Ok(())
+}
+
+/// Discovers the Verovio source directory using the priority order.
+///
+/// Returns the path to the Verovio source directory, or an error message.
+fn discover_verovio_source() -> Result<PathBuf, String> {
+    // Priority 1: VEROVIO_SOURCE_DIR environment variable
+    if let Ok(env_path) = std::env::var("VEROVIO_SOURCE_DIR") {
+        let path = PathBuf::from(&env_path);
+        if path.exists() && path.join("src").exists() {
+            println!(
+                "cargo:warning=Using Verovio source from VEROVIO_SOURCE_DIR: {}",
+                path.display()
+            );
+            return Ok(path);
+        } else {
+            return Err(format!(
+                "VEROVIO_SOURCE_DIR is set to '{}' but it doesn't appear to be a valid Verovio source directory. \
+                 Expected to find a 'src' subdirectory.",
+                env_path
+            ));
+        }
+    }
+
+    // Priority 2: Local submodule path
+    let manifest_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
+    let submodule_path = manifest_dir.join("../../verovio");
+    if let Ok(canonical) = submodule_path.canonicalize() {
+        if canonical.join("src").exists() {
+            println!(
+                "cargo:warning=Using Verovio source from local submodule: {}",
+                canonical.display()
+            );
+            return Ok(canonical);
+        }
+    }
+
+    // Priority 3: Cached download
+    let cache_dir = get_cache_dir();
+    let source_cache_dir = get_cached_source_dir();
+    let extracted_dir = source_cache_dir.join(format!("verovio-version-{}", VEROVIO_VERSION));
+
+    if extracted_dir.exists() && extracted_dir.join("src").exists() {
+        println!(
+            "cargo:warning=Using cached Verovio source from: {}",
+            extracted_dir.display()
+        );
+        return Ok(extracted_dir);
+    }
+
+    // Priority 4: Download from GitHub
+    println!("cargo:warning=Verovio source not found locally, downloading from GitHub...");
+
+    // Create cache directories
+    std::fs::create_dir_all(&cache_dir)
+        .map_err(|e| format!("Failed to create cache directory: {}", e))?;
+    std::fs::create_dir_all(&source_cache_dir)
+        .map_err(|e| format!("Failed to create source cache directory: {}", e))?;
+
+    let tarball_path = source_cache_dir.join(format!("verovio-{}.tar.gz", VEROVIO_VERSION));
+    let url = get_download_url();
+
+    // Download the tarball
+    download_file(&url, &tarball_path)?;
+
+    // Verify the SHA256 hash
+    println!("cargo:warning=Verifying download integrity...");
+    match verify_sha256(&tarball_path, VEROVIO_TARBALL_SHA256) {
+        Ok(HashVerification::Match) => {
+            println!("cargo:warning=SHA256 hash verified successfully");
+        }
+        Ok(HashVerification::Mismatch { actual }) => {
+            // Remove the file that failed verification
+            let _ = std::fs::remove_file(&tarball_path);
+            return Err(format!(
+                "SHA256 hash mismatch for downloaded Verovio source.\n\n\
+                 Expected: {}\n\
+                 Actual:   {}\n\n\
+                 This could indicate:\n\
+                 1. A corrupted download - try again\n\
+                 2. The VEROVIO_TARBALL_SHA256 constant needs updating for version {}\n\
+                 3. A supply chain attack (unlikely but verify manually)\n\n\
+                 To update the hash, run:\n\
+                 curl -sL {} | shasum -a 256\n\n\
+                 Or set VEROVIO_SOURCE_DIR to use a local copy.",
+                VEROVIO_TARBALL_SHA256,
+                actual,
+                VEROVIO_VERSION,
+                get_download_url()
+            ));
+        }
+        Err(e) => {
+            let _ = std::fs::remove_file(&tarball_path);
+            return Err(format!("Failed to verify download hash: {}", e));
+        }
+    }
+
+    // Extract the tarball
+    println!("cargo:warning=Extracting Verovio source...");
+    extract_tarball(&tarball_path, &source_cache_dir)?;
+
+    // Verify extraction succeeded
+    if extracted_dir.exists() && extracted_dir.join("src").exists() {
+        println!(
+            "cargo:warning=Verovio source extracted to: {}",
+            extracted_dir.display()
+        );
+        // Clean up the tarball to save space
+        let _ = std::fs::remove_file(&tarball_path);
+        Ok(extracted_dir)
+    } else {
+        Err(format!(
+            "Extraction completed but expected directory not found: {}\n\
+             Please report this issue or set VEROVIO_SOURCE_DIR to use a local copy.",
+            extracted_dir.display()
+        ))
+    }
+}
+
 fn main() {
     // Only compile when the bundled feature is enabled
     // (use env var since cfg! is compile-time, not runtime in build scripts)
@@ -143,22 +368,13 @@ fn main() {
         return;
     }
 
-    let manifest_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
-    let verovio_dir = manifest_dir.join("../../verovio").canonicalize().unwrap();
     let out_dir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
 
     // Set up rerun-if-changed directives
     // These only affect when Cargo decides to re-run this build script,
     // not whether we use the cache
     println!("cargo:rerun-if-changed=build.rs");
-    println!(
-        "cargo:rerun-if-changed={}",
-        verovio_dir.join("tools/c_wrapper.cpp").display()
-    );
-    println!(
-        "cargo:rerun-if-changed={}",
-        verovio_dir.join("tools/c_wrapper.h").display()
-    );
+    println!("cargo:rerun-if-env-changed=VEROVIO_SOURCE_DIR");
 
     // Check if we can use the cached library
     if should_use_cache() {
@@ -168,6 +384,31 @@ fn main() {
     }
 
     // --- Full compilation path ---
+
+    // Discover Verovio source directory
+    let verovio_dir = match discover_verovio_source() {
+        Ok(path) => path,
+        Err(e) => {
+            panic!(
+                "\n\nFailed to locate Verovio source:\n\n{}\n\n\
+                 To resolve this, you can:\n\
+                 1. Set VEROVIO_SOURCE_DIR environment variable to your local Verovio source\n\
+                 2. Initialize the git submodule: git submodule update --init\n\
+                 3. Ensure you have network access to download from GitHub\n\n",
+                e
+            );
+        }
+    };
+
+    // Set up rerun-if-changed for source files now that we have the path
+    println!(
+        "cargo:rerun-if-changed={}",
+        verovio_dir.join("tools/c_wrapper.cpp").display()
+    );
+    println!(
+        "cargo:rerun-if-changed={}",
+        verovio_dir.join("tools/c_wrapper.h").display()
+    );
 
     // Generate git_commit.h if it doesn't exist
     let git_commit_h = verovio_dir.join("include/vrv/git_commit.h");

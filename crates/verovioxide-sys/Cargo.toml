@@ -20,5 +20,9 @@ force-rebuild = []
 
 [build-dependencies]
 cc = "1"
+flate2 = "1"
+sha2 = "0.10"
+tar = "0.4"
+ureq = "2"
 
 [dependencies]

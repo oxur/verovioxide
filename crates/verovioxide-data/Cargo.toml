@@ -8,6 +8,13 @@ repository.workspace = true
 description = "Bundled SMuFL fonts and resources for verovioxide"
 keywords = ["mei", "music", "notation", "verovio", "smufl"]
 categories = ["multimedia::encoding"]
+include = [
+    "src/**/*",
+    "data/**/*",
+    "Cargo.toml",
+    "LICENSE*",
+    "README.md",
+]
 
 [features]
 default = ["font-leipzig"]

@@ -108,6 +108,18 @@ verovio:
 	@cd verovio && git checkout version-$(VEROVIO_VERSION) && cd ..
 	@echo "$(GREEN)✓ Finished setting up verovio submodule$(RESET)"
 
+.PHONY: sync-fonts
+sync-fonts:
+	@echo "$(BLUE)Syncing fonts from verovio submodule...$(RESET)"
+	@if [ ! -d verovio/data ]; then \
+		echo "$(RED)✗ verovio/data not found. Run 'git submodule update --init' first.$(RESET)"; \
+		exit 1; \
+	fi
+	@rm -rf crates/verovioxide-data/data
+	@cp -r verovio/data crates/verovioxide-data/data
+	@echo "$(GREEN)✓ Fonts synced to crates/verovioxide-data/data/$(RESET)"
+	@du -sh crates/verovioxide-data/data/
+
 # Check tools target
 .PHONY: check-tools
 check-tools:

@@ -47,7 +47,7 @@ use thiserror::Error;
 ///
 /// This contains all bundled SMuFL fonts and resources compiled into the binary.
 /// The actual contents depend on which font features are enabled at compile time.
-static VEROVIO_DATA: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/../../verovio/data");
+static VEROVIO_DATA: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/data");
 
 /// Errors that can occur when working with verovioxide data resources.
 #[derive(Debug, Error)]
