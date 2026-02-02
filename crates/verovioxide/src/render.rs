@@ -561,17 +561,18 @@ impl RenderSpec for MeiOptionsBuilder {
 ///
 /// Returns an error for ambiguous extensions (like `.json`) that require
 /// explicit format specification.
-pub(crate) fn infer_format_and_render(
-    toolkit: &Toolkit,
-    path: &Path,
-) -> Result<()> {
+pub(crate) fn infer_format_and_render(toolkit: &Toolkit, path: &Path) -> Result<()> {
     let ext = path
         .extension()
         .and_then(|e| e.to_str())
         .map(|s| s.to_lowercase());
 
     match ext.as_deref() {
-        Some("svg") => SvgPage { page: 1, declaration: false }.render_to_file(toolkit, path),
+        Some("svg") => SvgPage {
+            page: 1,
+            declaration: false,
+        }
+        .render_to_file(toolkit, path),
         Some("mid") | Some("midi") => Midi.render_to_file(toolkit, path),
         Some("pae") => Pae.render_to_file(toolkit, path),
         Some("mei") => Mei.render_to_file(toolkit, path),
@@ -583,9 +584,7 @@ pub(crate) fn infer_format_and_render(
             "unsupported file extension: .{}",
             ext
         ))),
-        None => Err(Error::RenderError(
-            "file path has no extension".into(),
-        )),
+        None => Err(Error::RenderError("file path has no extension".into())),
     }
 }
 
@@ -647,9 +646,7 @@ mod tests {
         let opts = Mei::with_options().remove_ids(true);
         assert_eq!(opts.to_json(), "{\"removeIds\":true}");
 
-        let opts = Mei::with_options()
-            .remove_ids(true)
-            .page_based(false);
+        let opts = Mei::with_options().remove_ids(true).page_based(false);
         assert!(opts.to_json().contains("\"removeIds\":true"));
         assert!(opts.to_json().contains("\"pageBasedMei\":false"));
     }

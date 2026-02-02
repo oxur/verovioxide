@@ -51,6 +51,8 @@
 //!
 //! let features: String = voxide.get(Features).unwrap();
 //! ```
+//!
+//! *Added in 0.3.0.*
 
 use crate::{Result, Toolkit};
 
@@ -62,6 +64,9 @@ use crate::{Result, Toolkit};
 ///
 /// Each query type implements this trait, specifying its output type
 /// (e.g., `u32` for page numbers, `f64` for time, `String` for JSON).
+///
+/// *Added in 0.3.0.*
+#[cfg_attr(docsrs, doc(cfg(since = "0.3.0")))]
 pub trait QueryOutput {
     /// The type returned by this query.
     type Output;
@@ -89,13 +94,18 @@ pub trait QueryOutput {
 /// let page: u32 = voxide.get(Page::of("note-001")).unwrap();
 /// println!("Element is on page {}", page);
 /// ```
+///
+/// *Added in 0.3.0.*
 #[derive(Debug, Clone)]
+#[cfg_attr(docsrs, doc(cfg(since = "0.3.0")))]
 pub struct Page<'a> {
     xml_id: &'a str,
 }
 
 impl<'a> Page<'a> {
     /// Create a page query for the given element ID.
+    ///
+    /// *Added in 0.3.0.*
     pub fn of(xml_id: &'a str) -> Self {
         Self { xml_id }
     }
@@ -122,13 +132,18 @@ impl<'a> QueryOutput for Page<'a> {
 /// let attrs: String = voxide.get(Attrs::of("note-001")).unwrap();
 /// println!("Attributes: {}", attrs);
 /// ```
+///
+/// *Added in 0.3.0.*
 #[derive(Debug, Clone)]
+#[cfg_attr(docsrs, doc(cfg(since = "0.3.0")))]
 pub struct Attrs<'a> {
     xml_id: &'a str,
 }
 
 impl<'a> Attrs<'a> {
     /// Create an attributes query for the given element ID.
+    ///
+    /// *Added in 0.3.0.*
     pub fn of(xml_id: &'a str) -> Self {
         Self { xml_id }
     }
@@ -157,13 +172,18 @@ impl<'a> QueryOutput for Attrs<'a> {
 /// let time: f64 = voxide.get(Time::of("note-001")).unwrap();
 /// println!("Element starts at {} ms", time);
 /// ```
+///
+/// *Added in 0.3.0.*
 #[derive(Debug, Clone)]
+#[cfg_attr(docsrs, doc(cfg(since = "0.3.0")))]
 pub struct Time<'a> {
     xml_id: &'a str,
 }
 
 impl<'a> Time<'a> {
     /// Create a time query for the given element ID.
+    ///
+    /// *Added in 0.3.0.*
     pub fn of(xml_id: &'a str) -> Self {
         Self { xml_id }
     }
@@ -192,13 +212,18 @@ impl<'a> QueryOutput for Time<'a> {
 /// let times: String = voxide.get(Times::of("note-001")).unwrap();
 /// println!("Times: {}", times);
 /// ```
+///
+/// *Added in 0.3.0.*
 #[derive(Debug, Clone)]
+#[cfg_attr(docsrs, doc(cfg(since = "0.3.0")))]
 pub struct Times<'a> {
     xml_id: &'a str,
 }
 
 impl<'a> Times<'a> {
     /// Create a times query for the given element ID.
+    ///
+    /// *Added in 0.3.0.*
     pub fn of(xml_id: &'a str) -> Self {
         Self { xml_id }
     }
@@ -227,13 +252,18 @@ impl<'a> QueryOutput for Times<'a> {
 /// let ids: String = voxide.get(ExpansionIds::of("note-001")).unwrap();
 /// println!("Expansion IDs: {}", ids);
 /// ```
+///
+/// *Added in 0.3.0.*
 #[derive(Debug, Clone)]
+#[cfg_attr(docsrs, doc(cfg(since = "0.3.0")))]
 pub struct ExpansionIds<'a> {
     xml_id: &'a str,
 }
 
 impl<'a> ExpansionIds<'a> {
     /// Create an expansion IDs query for the given element ID.
+    ///
+    /// *Added in 0.3.0.*
     pub fn of(xml_id: &'a str) -> Self {
         Self { xml_id }
     }
@@ -262,13 +292,18 @@ impl<'a> QueryOutput for ExpansionIds<'a> {
 /// let midi: String = voxide.get(MidiValues::of("note-001")).unwrap();
 /// println!("MIDI values: {}", midi);
 /// ```
+///
+/// *Added in 0.3.0.*
 #[derive(Debug, Clone)]
+#[cfg_attr(docsrs, doc(cfg(since = "0.3.0")))]
 pub struct MidiValues<'a> {
     xml_id: &'a str,
 }
 
 impl<'a> MidiValues<'a> {
     /// Create a MIDI values query for the given element ID.
+    ///
+    /// *Added in 0.3.0.*
     pub fn of(xml_id: &'a str) -> Self {
         Self { xml_id }
     }
@@ -297,13 +332,18 @@ impl<'a> QueryOutput for MidiValues<'a> {
 /// let notated: String = voxide.get(NotatedId::of("note-001")).unwrap();
 /// println!("Notated ID: {}", notated);
 /// ```
+///
+/// *Added in 0.3.0.*
 #[derive(Debug, Clone)]
+#[cfg_attr(docsrs, doc(cfg(since = "0.3.0")))]
 pub struct NotatedId<'a> {
     xml_id: &'a str,
 }
 
 impl<'a> NotatedId<'a> {
     /// Create a notated ID query for the given element ID.
+    ///
+    /// *Added in 0.3.0.*
     pub fn of(xml_id: &'a str) -> Self {
         Self { xml_id }
     }
@@ -337,13 +377,18 @@ impl<'a> QueryOutput for NotatedId<'a> {
 /// let elements: String = voxide.get(Elements::at(5000)).unwrap();
 /// println!("Elements at 5s: {}", elements);
 /// ```
+///
+/// *Added in 0.3.0.*
 #[derive(Debug, Clone, Copy)]
+#[cfg_attr(docsrs, doc(cfg(since = "0.3.0")))]
 pub struct Elements {
     millisec: i32,
 }
 
 impl Elements {
     /// Create a query for elements at the given time in milliseconds.
+    ///
+    /// *Added in 0.3.0.*
     pub fn at(millisec: i32) -> Self {
         Self { millisec }
     }
@@ -376,11 +421,16 @@ impl QueryOutput for Elements {
 /// let features: String = voxide.get(Features).unwrap();
 /// println!("Features: {}", features);
 /// ```
+///
+/// *Added in 0.3.0.*
 #[derive(Debug, Clone, Copy)]
+#[cfg_attr(docsrs, doc(cfg(since = "0.3.0")))]
 pub struct Features;
 
 impl Features {
     /// Create a features query with custom options.
+    ///
+    /// *Added in 0.3.0.*
     pub fn with_options() -> FeaturesOptionsBuilder {
         FeaturesOptionsBuilder::default()
     }
@@ -395,13 +445,18 @@ impl QueryOutput for Features {
 }
 
 /// Builder for descriptive features options.
+///
+/// *Added in 0.3.0.*
 #[derive(Debug, Clone, Default)]
+#[cfg_attr(docsrs, doc(cfg(since = "0.3.0")))]
 pub struct FeaturesOptionsBuilder {
     options: Vec<(String, String)>,
 }
 
 impl FeaturesOptionsBuilder {
     /// Add a custom option.
+    ///
+    /// *Added in 0.3.0.*
     pub fn option(mut self, key: &str, value: &str) -> Self {
         self.options.push((key.to_string(), value.to_string()));
         self

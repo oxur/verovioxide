@@ -918,15 +918,23 @@ impl Toolkit {
     ///
     /// | Format | Builder | Output Type |
     /// |--------|---------|-------------|
-    /// | SVG (single page) | [`Svg::page(n)`] | `String` |
-    /// | SVG (page range) | [`Svg::pages(start, end)`] | `Vec<String>` |
-    /// | SVG (all pages) | [`Svg::all_pages()`] | `Vec<String>` |
+    /// | SVG (single page) | [`Svg`]`::page(n)` | `String` |
+    /// | SVG (page range) | [`Svg`]`::pages(start, end)` | `Vec<String>` |
+    /// | SVG (all pages) | [`Svg`]`::all_pages()` | `Vec<String>` |
     /// | MIDI | [`Midi`] | `String` (base64) |
     /// | PAE | [`Pae`] | `String` |
     /// | Timemap | [`Timemap`] | `String` (JSON) |
     /// | ExpansionMap | [`ExpansionMap`] | `String` (JSON) |
     /// | MEI | [`Mei`] | `String` |
     /// | Humdrum | [`Humdrum`] | `String` |
+    ///
+    /// [`Svg`]: crate::Svg
+    /// [`Midi`]: crate::Midi
+    /// [`Pae`]: crate::Pae
+    /// [`Timemap`]: crate::Timemap
+    /// [`ExpansionMap`]: crate::ExpansionMap
+    /// [`Mei`]: crate::Mei
+    /// [`Humdrum`]: crate::Humdrum
     ///
     /// # Examples
     ///
@@ -1084,15 +1092,25 @@ impl Toolkit {
     ///
     /// | Query | Builder | Output Type |
     /// |-------|---------|-------------|
-    /// | Page number | [`Page::of(id)`] | `u32` |
-    /// | Attributes | [`Attrs::of(id)`] | `String` (JSON) |
-    /// | Time | [`Time::of(id)`] | `f64` (milliseconds) |
-    /// | Times | [`Times::of(id)`] | `String` (JSON) |
-    /// | Expansion IDs | [`ExpansionIds::of(id)`] | `String` (JSON) |
-    /// | MIDI values | [`MidiValues::of(id)`] | `String` (JSON) |
-    /// | Notated ID | [`NotatedId::of(id)`] | `String` |
-    /// | Elements at time | [`Elements::at(ms)`] | `String` (JSON) |
+    /// | Page number | [`Page`]`::of(id)` | `u32` |
+    /// | Attributes | [`Attrs`]`::of(id)` | `String` (JSON) |
+    /// | Time | [`Time`]`::of(id)` | `f64` (milliseconds) |
+    /// | Times | [`Times`]`::of(id)` | `String` (JSON) |
+    /// | Expansion IDs | [`ExpansionIds`]`::of(id)` | `String` (JSON) |
+    /// | MIDI values | [`MidiValues`]`::of(id)` | `String` (JSON) |
+    /// | Notated ID | [`NotatedId`]`::of(id)` | `String` |
+    /// | Elements at time | [`Elements`]`::at(ms)` | `String` (JSON) |
     /// | Descriptive features | [`Features`] | `String` (JSON) |
+    ///
+    /// [`Page`]: crate::Page
+    /// [`Attrs`]: crate::Attrs
+    /// [`Time`]: crate::Time
+    /// [`Times`]: crate::Times
+    /// [`ExpansionIds`]: crate::ExpansionIds
+    /// [`MidiValues`]: crate::MidiValues
+    /// [`NotatedId`]: crate::NotatedId
+    /// [`Elements`]: crate::Elements
+    /// [`Features`]: crate::Features
     ///
     /// # Examples
     ///
@@ -1123,6 +1141,9 @@ impl Toolkit {
     /// - [`get_page_with_element`](Self::get_page_with_element) - Legacy method for page lookup
     /// - [`get_element_attr`](Self::get_element_attr) - Legacy method for attributes
     /// - [`get_time_for_element`](Self::get_time_for_element) - Legacy method for time
+    ///
+    /// *Added in 0.3.0.*
+    #[cfg_attr(docsrs, doc(cfg(since = "0.3.0")))]
     pub fn get<Q: crate::query::QueryOutput>(&self, query: Q) -> Result<Q::Output> {
         query.query(self)
     }
@@ -4821,7 +4842,9 @@ CDEF|"#;
 
         // Load using direct method
         let mut toolkit2 = Toolkit::new().expect("Failed to create toolkit");
-        toolkit2.load_data(mei).expect("Failed to load via load_data()");
+        toolkit2
+            .load_data(mei)
+            .expect("Failed to load via load_data()");
         let page_count_direct = toolkit2.page_count();
 
         assert_eq!(page_count_load, page_count_direct);

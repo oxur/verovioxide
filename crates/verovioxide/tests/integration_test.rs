@@ -624,8 +624,8 @@ fn test_readme_quick_start_pattern() {
 // Unified Render API Tests
 // =============================================================================
 
-use verovioxide::{ExpansionMap, Humdrum, Mei, Midi, Pae, Svg, Timemap};
 use verovioxide::{Attrs, Elements, Features, Page, Time, Times};
+use verovioxide::{ExpansionMap, Humdrum, Mei, Midi, Pae, Svg, Timemap};
 
 /// Test the unified render() method with Svg::page().
 #[test]
@@ -659,9 +659,7 @@ fn test_render_svg_all_pages() {
     let mut voxide = Toolkit::new().expect("Failed to create toolkit");
     voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
 
-    let pages: Vec<String> = voxide
-        .render(Svg::all_pages())
-        .expect("Failed to render");
+    let pages: Vec<String> = voxide.render(Svg::all_pages()).expect("Failed to render");
     assert!(!pages.is_empty());
     for svg in &pages {
         assert_valid_svg(svg);
@@ -764,7 +762,9 @@ fn test_render_expansion_map() {
 #[serial]
 fn test_render_unified_mei() {
     let mut voxide = Toolkit::new().expect("Failed to create toolkit");
-    voxide.load(SIMPLE_MUSICXML).expect("Failed to load MusicXML");
+    voxide
+        .load(SIMPLE_MUSICXML)
+        .expect("Failed to load MusicXML");
 
     let mei: String = voxide.render(Mei).expect("Failed to render MEI");
     assert!(mei.contains("<mei"));
@@ -776,7 +776,9 @@ fn test_render_unified_mei() {
 #[serial]
 fn test_render_mei_with_options() {
     let mut voxide = Toolkit::new().expect("Failed to create toolkit");
-    voxide.load(SIMPLE_MUSICXML).expect("Failed to load MusicXML");
+    voxide
+        .load(SIMPLE_MUSICXML)
+        .expect("Failed to load MusicXML");
 
     let mei: String = voxide
         .render(Mei::with_options().remove_ids(false))
@@ -838,7 +840,9 @@ fn test_render_to_midi_file() {
 #[serial]
 fn test_render_to_mei_file() {
     let mut voxide = Toolkit::new().expect("Failed to create toolkit");
-    voxide.load(SIMPLE_MUSICXML).expect("Failed to load MusicXML");
+    voxide
+        .load(SIMPLE_MUSICXML)
+        .expect("Failed to load MusicXML");
 
     let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
     let output_path = temp_dir.path().join("output.mei");
@@ -958,9 +962,7 @@ fn test_query_page() {
         if let Some(end) = timemap[start..].find('"') {
             let note_id = &timemap[start..start + end];
             // Query which page this element is on
-            let page: u32 = voxide
-                .get(Page::of(note_id))
-                .expect("Failed to get page");
+            let page: u32 = voxide.get(Page::of(note_id)).expect("Failed to get page");
             assert_eq!(page, 1, "Element should be on page 1");
         }
     }
@@ -985,9 +987,7 @@ fn test_query_attrs() {
         if let Some(end) = timemap[start..].find('"') {
             let note_id = &timemap[start..start + end];
             // Query attributes
-            let attrs: String = voxide
-                .get(Attrs::of(note_id))
-                .expect("Failed to get attrs");
+            let attrs: String = voxide.get(Attrs::of(note_id)).expect("Failed to get attrs");
             // Attributes should be JSON
             assert!(
                 attrs.starts_with('{') || attrs == "{}",
@@ -1047,9 +1047,7 @@ fn test_query_times() {
             if let Some(end) = timemap[start..].find('"') {
                 let note_id = &timemap[start..start + end];
                 // Query times for this note (returns JSON array)
-                let times: String = voxide
-                    .get(Times::of(note_id))
-                    .expect("Failed to get times");
+                let times: String = voxide.get(Times::of(note_id)).expect("Failed to get times");
                 // Times should be JSON array
                 assert!(
                     times.starts_with('[') || times.starts_with('{'),
