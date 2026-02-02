@@ -350,6 +350,413 @@ impl Toolkit {
         }
     }
 
+    // =========================================================================
+    // Format Control Functions
+    // =========================================================================
+
+    /// Sets the input format explicitly.
+    ///
+    /// By default, Verovio auto-detects the input format. Use this method
+    /// to override the auto-detection and specify the format explicitly.
+    ///
+    /// # Arguments
+    ///
+    /// * `format` - Input format string (e.g., "mei", "musicxml", "humdrum", "pae", "abc")
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the format is not recognized.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    ///
+    /// let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// toolkit.set_input_from("mei").expect("Failed to set input format");
+    /// // Now load_data will treat input as MEI regardless of content
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`set_output_to`](Self::set_output_to) - Set output format
+    /// - [`load_data`](Self::load_data) - Load music data
+    pub fn set_input_from(&mut self, format: &str) -> Result<()> {
+        let c_format = CString::new(format)?;
+
+        // SAFETY: ptr is valid, c_format is a valid null-terminated string
+        let success =
+            unsafe { verovioxide_sys::vrvToolkit_setInputFrom(self.ptr, c_format.as_ptr()) };
+
+        if success {
+            Ok(())
+        } else {
+            Err(Error::OptionsError(format!(
+                "unrecognized input format: {}",
+                format
+            )))
+        }
+    }
+
+    /// Sets the output format.
+    ///
+    /// This affects the format used by [`render_data`](Self::render_data) and
+    /// other rendering operations.
+    ///
+    /// # Arguments
+    ///
+    /// * `format` - Output format string (e.g., "svg", "mei", "midi", "humdrum")
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the format is not recognized.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    ///
+    /// let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// toolkit.set_output_to("mei").expect("Failed to set output format");
+    /// // Now render_data will output MEI instead of SVG
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`set_input_from`](Self::set_input_from) - Set input format
+    /// - [`render_data`](Self::render_data) - Render data with current output format
+    pub fn set_output_to(&mut self, format: &str) -> Result<()> {
+        let c_format = CString::new(format)?;
+
+        // SAFETY: ptr is valid, c_format is a valid null-terminated string
+        let success =
+            unsafe { verovioxide_sys::vrvToolkit_setOutputTo(self.ptr, c_format.as_ptr()) };
+
+        if success {
+            Ok(())
+        } else {
+            Err(Error::OptionsError(format!(
+                "unrecognized output format: {}",
+                format
+            )))
+        }
+    }
+
+    // =========================================================================
+    // ZIP Loading Functions
+    // =========================================================================
+
+    /// Loads compressed MusicXML from base64-encoded ZIP data.
+    ///
+    /// MusicXML files are often distributed as compressed `.mxl` files.
+    /// This method loads such files when provided as base64-encoded data.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - Base64-encoded ZIP data containing MusicXML
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The data contains a null byte
+    /// - The data is not valid base64
+    /// - The ZIP archive is invalid
+    /// - The MusicXML content is malformed
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    ///
+    /// let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// let base64_zip = "..."; // base64-encoded .mxl file contents
+    /// toolkit.load_zip_data_base64(base64_zip)
+    ///     .expect("Failed to load compressed MusicXML");
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`load_zip_data_buffer`](Self::load_zip_data_buffer) - Load from binary buffer
+    /// - [`load_data`](Self::load_data) - Load uncompressed data
+    pub fn load_zip_data_base64(&mut self, data: &str) -> Result<()> {
+        let c_data = CString::new(data)?;
+
+        // SAFETY: ptr is valid, c_data is a valid null-terminated string
+        let success =
+            unsafe { verovioxide_sys::vrvToolkit_loadZipDataBase64(self.ptr, c_data.as_ptr()) };
+
+        if success {
+            Ok(())
+        } else {
+            Err(Error::LoadError(
+                "failed to load ZIP data (base64)".into(),
+            ))
+        }
+    }
+
+    /// Loads compressed MusicXML from a binary buffer.
+    ///
+    /// MusicXML files are often distributed as compressed `.mxl` files.
+    /// This method loads such files directly from binary data.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - Binary ZIP data containing MusicXML
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The ZIP archive is invalid
+    /// - The MusicXML content is malformed
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    /// use std::fs;
+    ///
+    /// let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// let zip_data = fs::read("score.mxl").expect("Failed to read file");
+    /// toolkit.load_zip_data_buffer(&zip_data)
+    ///     .expect("Failed to load compressed MusicXML");
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`load_zip_data_base64`](Self::load_zip_data_base64) - Load from base64 string
+    /// - [`load_file`](Self::load_file) - Load from file path
+    pub fn load_zip_data_buffer(&mut self, data: &[u8]) -> Result<()> {
+        // SAFETY: ptr is valid, data.as_ptr() is valid for data.len() bytes
+        let success = unsafe {
+            verovioxide_sys::vrvToolkit_loadZipDataBuffer(
+                self.ptr,
+                data.as_ptr(),
+                data.len() as std::ffi::c_int,
+            )
+        };
+
+        if success {
+            Ok(())
+        } else {
+            Err(Error::LoadError("failed to load ZIP data buffer".into()))
+        }
+    }
+
+    // =========================================================================
+    // PAE Validation Functions
+    // =========================================================================
+
+    /// Validates Plaine & Easie code.
+    ///
+    /// This method validates PAE code without loading it into the toolkit.
+    /// It returns a JSON string with validation results.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - PAE code to validate
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The data contains a null byte
+    /// - Validation fails unexpectedly
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    ///
+    /// let toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// let pae_code = "@clef:G-2\n@keysig:xFCG\n@timesig:4/4\n@data:4C";
+    /// let result = toolkit.validate_pae(pae_code)
+    ///     .expect("Failed to validate");
+    /// println!("Validation result: {}", result);
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`validate_pae_file`](Self::validate_pae_file) - Validate from file
+    /// - [`render_to_pae`](Self::render_to_pae) - Export to PAE
+    pub fn validate_pae(&self, data: &str) -> Result<String> {
+        let c_data = CString::new(data)?;
+
+        // SAFETY: ptr is valid, c_data is a valid null-terminated string
+        let result_ptr =
+            unsafe { verovioxide_sys::vrvToolkit_validatePAE(self.ptr, c_data.as_ptr()) };
+
+        self.ptr_to_string(result_ptr)
+            .ok_or_else(|| Error::RenderError("failed to validate PAE".into()))
+    }
+
+    /// Validates PAE code from a file.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - Path to the PAE file to validate
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The file does not exist
+    /// - The path contains invalid UTF-8
+    /// - Validation fails unexpectedly
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    /// use std::path::Path;
+    ///
+    /// let toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// let result = toolkit.validate_pae_file(Path::new("score.pae"))
+    ///     .expect("Failed to validate");
+    /// println!("Validation result: {}", result);
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`validate_pae`](Self::validate_pae) - Validate from string
+    /// - [`render_to_pae_file`](Self::render_to_pae_file) - Export to PAE file
+    pub fn validate_pae_file(&self, path: &Path) -> Result<String> {
+        if !path.exists() {
+            return Err(Error::FileNotFound(path.to_path_buf()));
+        }
+
+        let path_str = path
+            .to_str()
+            .ok_or_else(|| Error::RenderError("file path contains invalid UTF-8".into()))?;
+
+        let c_path = CString::new(path_str)?;
+
+        // SAFETY: ptr is valid, c_path is a valid null-terminated string
+        let result_ptr =
+            unsafe { verovioxide_sys::vrvToolkit_validatePAEFile(self.ptr, c_path.as_ptr()) };
+
+        self.ptr_to_string(result_ptr)
+            .ok_or_else(|| Error::RenderError(format!("failed to validate PAE file: {}", path.display())))
+    }
+
+    // =========================================================================
+    // Selection and Layout Functions
+    // =========================================================================
+
+    /// Selects elements in the document.
+    ///
+    /// This method allows selecting specific elements in the loaded document,
+    /// which can affect rendering (e.g., highlighting selected elements).
+    ///
+    /// # Arguments
+    ///
+    /// * `selection` - JSON string describing the selection (element IDs, ranges, etc.)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The selection string contains a null byte
+    /// - The selection is invalid
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    ///
+    /// let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// // ... load data ...
+    /// let selection = r#"{"start": "note-0001", "end": "note-0010"}"#;
+    /// toolkit.select(selection).expect("Failed to select");
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`render_to_svg`](Self::render_to_svg) - Render with selection applied
+    /// - [`edit`](Self::edit) - Perform editor actions
+    pub fn select(&mut self, selection: &str) -> Result<()> {
+        let c_selection = CString::new(selection)?;
+
+        // SAFETY: ptr is valid, c_selection is a valid null-terminated string
+        let success =
+            unsafe { verovioxide_sys::vrvToolkit_select(self.ptr, c_selection.as_ptr()) };
+
+        if success {
+            Ok(())
+        } else {
+            Err(Error::RenderError("failed to apply selection".into()))
+        }
+    }
+
+    /// Redoes the pitch position layout for the current page.
+    ///
+    /// This method recalculates pitch positions without redoing the full layout.
+    /// It's useful after certain modifications that only affect vertical positioning.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    ///
+    /// let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// // ... load data and make modifications ...
+    /// toolkit.redo_page_pitch_pos_layout();
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`redo_layout`](Self::redo_layout) - Full layout recalculation
+    pub fn redo_page_pitch_pos_layout(&mut self) {
+        // SAFETY: ptr is valid
+        unsafe { verovioxide_sys::vrvToolkit_redoPagePitchPosLayout(self.ptr) };
+    }
+
+    /// Resets the XML ID seed.
+    ///
+    /// This affects how new xml:id values are generated when creating or
+    /// modifying elements. Setting a consistent seed can be useful for
+    /// reproducible output.
+    ///
+    /// # Arguments
+    ///
+    /// * `seed` - The new seed value
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    ///
+    /// let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// toolkit.reset_xml_id_seed(42);
+    /// // Now newly generated IDs will be deterministic based on this seed
+    /// ```
+    pub fn reset_xml_id_seed(&mut self, seed: i32) {
+        // SAFETY: ptr is valid
+        unsafe { verovioxide_sys::vrvToolkit_resetXmlIdSeed(self.ptr, seed) };
+    }
+
+    /// Gets the option usage string.
+    ///
+    /// Returns a formatted string describing all available command-line options,
+    /// suitable for displaying help information.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    ///
+    /// let toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// let usage = toolkit.get_option_usage_string();
+    /// println!("Options:\n{}", usage);
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`get_available_options`](Self::get_available_options) - Get options as JSON
+    /// - [`get_options`](Self::get_options) - Get current options
+    #[must_use]
+    pub fn get_option_usage_string(&self) -> String {
+        // SAFETY: ptr is valid
+        let usage_ptr = unsafe { verovioxide_sys::vrvToolkit_getOptionUsageString(self.ptr) };
+        self.ptr_to_string(usage_ptr).unwrap_or_default()
+    }
+
     /// Renders a page to SVG.
     ///
     /// Page numbers are 1-based. Use [`page_count()`](Self::page_count) to get the
@@ -789,6 +1196,184 @@ impl Toolkit {
             .ok_or_else(|| Error::RenderError("failed to export Humdrum".into()))
     }
 
+    // =========================================================================
+    // Conversion Functions
+    // =========================================================================
+
+    /// Converts Humdrum data to processed Humdrum.
+    ///
+    /// This method processes Humdrum data through Verovio's internal pipeline,
+    /// which can normalize and enhance the data.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - Humdrum data as a string
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The data contains a null byte
+    /// - Conversion fails
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    ///
+    /// let toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// let humdrum_data = "**kern\n4c\n*-\n";
+    /// let processed = toolkit.convert_humdrum_to_humdrum(humdrum_data)
+    ///     .expect("Failed to convert");
+    /// println!("{}", processed);
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`convert_humdrum_to_midi`](Self::convert_humdrum_to_midi) - Convert to MIDI
+    /// - [`convert_mei_to_humdrum`](Self::convert_mei_to_humdrum) - Convert MEI to Humdrum
+    /// - [`get_humdrum`](Self::get_humdrum) - Get Humdrum from loaded document
+    pub fn convert_humdrum_to_humdrum(&self, data: &str) -> Result<String> {
+        let c_data = CString::new(data)?;
+
+        // SAFETY: ptr is valid, c_data is a valid null-terminated string
+        let result_ptr =
+            unsafe { verovioxide_sys::vrvToolkit_convertHumdrumToHumdrum(self.ptr, c_data.as_ptr()) };
+
+        self.ptr_to_string(result_ptr)
+            .ok_or_else(|| Error::RenderError("failed to convert Humdrum to Humdrum".into()))
+    }
+
+    /// Converts Humdrum data to MIDI (base64-encoded).
+    ///
+    /// This method converts Humdrum data directly to MIDI without loading
+    /// the data into the toolkit first.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - Humdrum data as a string
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The data contains a null byte
+    /// - Conversion fails
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    ///
+    /// let toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// let humdrum_data = "**kern\n4c\n*-\n";
+    /// let midi_base64 = toolkit.convert_humdrum_to_midi(humdrum_data)
+    ///     .expect("Failed to convert");
+    /// println!("MIDI (base64): {}", midi_base64);
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`convert_humdrum_to_humdrum`](Self::convert_humdrum_to_humdrum) - Process Humdrum
+    /// - [`render_to_midi`](Self::render_to_midi) - Render loaded document to MIDI
+    pub fn convert_humdrum_to_midi(&self, data: &str) -> Result<String> {
+        let c_data = CString::new(data)?;
+
+        // SAFETY: ptr is valid, c_data is a valid null-terminated string
+        let result_ptr =
+            unsafe { verovioxide_sys::vrvToolkit_convertHumdrumToMIDI(self.ptr, c_data.as_ptr()) };
+
+        self.ptr_to_string(result_ptr)
+            .ok_or_else(|| Error::RenderError("failed to convert Humdrum to MIDI".into()))
+    }
+
+    /// Converts MEI data to Humdrum.
+    ///
+    /// This method converts MEI data directly to Humdrum without loading
+    /// the data into the toolkit first.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - MEI data as a string
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The data contains a null byte
+    /// - Conversion fails
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    ///
+    /// let toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// let mei_data = r#"<mei xmlns="http://www.music-encoding.org/ns/mei">...</mei>"#;
+    /// let humdrum = toolkit.convert_mei_to_humdrum(mei_data)
+    ///     .expect("Failed to convert");
+    /// println!("{}", humdrum);
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`get_humdrum`](Self::get_humdrum) - Get Humdrum from loaded document
+    /// - [`convert_humdrum_to_humdrum`](Self::convert_humdrum_to_humdrum) - Process Humdrum
+    pub fn convert_mei_to_humdrum(&self, data: &str) -> Result<String> {
+        let c_data = CString::new(data)?;
+
+        // SAFETY: ptr is valid, c_data is a valid null-terminated string
+        let result_ptr =
+            unsafe { verovioxide_sys::vrvToolkit_convertMEIToHumdrum(self.ptr, c_data.as_ptr()) };
+
+        self.ptr_to_string(result_ptr)
+            .ok_or_else(|| Error::RenderError("failed to convert MEI to Humdrum".into()))
+    }
+
+    /// Renders data with options in one step.
+    ///
+    /// This is a convenience method that loads data and renders it in a single
+    /// operation. It combines `load_data`, `set_options`, and rendering.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - Music data to render (format auto-detected)
+    /// * `options` - Optional JSON string with rendering options
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The data contains a null byte
+    /// - Loading or rendering fails
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    ///
+    /// let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// let mei = r#"<mei xmlns="http://www.music-encoding.org/ns/mei">...</mei>"#;
+    /// let options = r#"{"scale": 50}"#;
+    /// let svg = toolkit.render_data(mei, Some(options))
+    ///     .expect("Failed to render");
+    /// println!("{}", svg);
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`load_data`](Self::load_data) - Load data separately
+    /// - [`set_options`](Self::set_options) - Set options separately
+    /// - [`render_to_svg`](Self::render_to_svg) - Render to SVG
+    pub fn render_data(&mut self, data: &str, options: Option<&str>) -> Result<String> {
+        let c_data = CString::new(data)?;
+        let c_options = CString::new(options.unwrap_or("{}"))?;
+
+        // SAFETY: ptr is valid, c_data and c_options are valid null-terminated strings
+        let result_ptr = unsafe {
+            verovioxide_sys::vrvToolkit_renderData(self.ptr, c_data.as_ptr(), c_options.as_ptr())
+        };
+
+        self.ptr_to_string(result_ptr)
+            .ok_or_else(|| Error::RenderError("failed to render data".into()))
+    }
+
     /// Renders the loaded document to MIDI as base64-encoded data.
     ///
     /// # Performance
@@ -899,6 +1484,378 @@ impl Toolkit {
 
         self.ptr_to_string(map_ptr)
             .ok_or_else(|| Error::RenderError("failed to render expansion map".into()))
+    }
+
+    // =========================================================================
+    // File Output Functions
+    // =========================================================================
+
+    /// Renders a page to SVG and saves to a file.
+    ///
+    /// This is a convenience method that combines rendering and file writing
+    /// in a single operation.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - Path to the output file
+    /// * `page` - The page number to render (1-based)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - No data has been loaded
+    /// - The page number is out of range
+    /// - The path contains invalid UTF-8
+    /// - Writing the file fails
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    /// use std::path::Path;
+    ///
+    /// let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// // ... load data ...
+    /// toolkit.render_to_svg_file(Path::new("output.svg"), 1)
+    ///     .expect("Failed to save SVG");
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`render_to_svg`](Self::render_to_svg) - Render to string
+    /// - [`render_to_midi_file`](Self::render_to_midi_file) - Save MIDI to file
+    pub fn render_to_svg_file(&self, path: &Path, page: u32) -> Result<()> {
+        let path_str = path
+            .to_str()
+            .ok_or_else(|| Error::RenderError("file path contains invalid UTF-8".into()))?;
+
+        let c_path = CString::new(path_str)?;
+
+        // SAFETY: ptr is valid, c_path is a valid null-terminated string
+        let success = unsafe {
+            verovioxide_sys::vrvToolkit_renderToSVGFile(self.ptr, c_path.as_ptr(), page as i32)
+        };
+
+        if success {
+            Ok(())
+        } else {
+            Err(Error::RenderError(format!(
+                "failed to save SVG to file: {}",
+                path.display()
+            )))
+        }
+    }
+
+    /// Renders the document to MIDI and saves to a file.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - Path to the output MIDI file
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - No data has been loaded
+    /// - The path contains invalid UTF-8
+    /// - Writing the file fails
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    /// use std::path::Path;
+    ///
+    /// let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// // ... load data ...
+    /// toolkit.render_to_midi_file(Path::new("output.mid"))
+    ///     .expect("Failed to save MIDI");
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`render_to_midi`](Self::render_to_midi) - Render to base64 string
+    /// - [`render_to_svg_file`](Self::render_to_svg_file) - Save SVG to file
+    pub fn render_to_midi_file(&self, path: &Path) -> Result<()> {
+        let path_str = path
+            .to_str()
+            .ok_or_else(|| Error::RenderError("file path contains invalid UTF-8".into()))?;
+
+        let c_path = CString::new(path_str)?;
+
+        // SAFETY: ptr is valid, c_path is a valid null-terminated string
+        let success =
+            unsafe { verovioxide_sys::vrvToolkit_renderToMIDIFile(self.ptr, c_path.as_ptr()) };
+
+        if success {
+            Ok(())
+        } else {
+            Err(Error::RenderError(format!(
+                "failed to save MIDI to file: {}",
+                path.display()
+            )))
+        }
+    }
+
+    /// Renders the document to PAE and saves to a file.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - Path to the output PAE file
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - No data has been loaded
+    /// - The path contains invalid UTF-8
+    /// - Writing the file fails
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    /// use std::path::Path;
+    ///
+    /// let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// // ... load data ...
+    /// toolkit.render_to_pae_file(Path::new("output.pae"))
+    ///     .expect("Failed to save PAE");
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`render_to_pae`](Self::render_to_pae) - Render to string
+    /// - [`validate_pae`](Self::validate_pae) - Validate PAE code
+    pub fn render_to_pae_file(&self, path: &Path) -> Result<()> {
+        let path_str = path
+            .to_str()
+            .ok_or_else(|| Error::RenderError("file path contains invalid UTF-8".into()))?;
+
+        let c_path = CString::new(path_str)?;
+
+        // SAFETY: ptr is valid, c_path is a valid null-terminated string
+        let success =
+            unsafe { verovioxide_sys::vrvToolkit_renderToPAEFile(self.ptr, c_path.as_ptr()) };
+
+        if success {
+            Ok(())
+        } else {
+            Err(Error::RenderError(format!(
+                "failed to save PAE to file: {}",
+                path.display()
+            )))
+        }
+    }
+
+    /// Renders the expansion map and saves to a file.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - Path to the output file
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - No data has been loaded
+    /// - The path contains invalid UTF-8
+    /// - Writing the file fails
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    /// use std::path::Path;
+    ///
+    /// let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// // ... load data ...
+    /// toolkit.render_to_expansion_map_file(Path::new("expansion_map.json"))
+    ///     .expect("Failed to save expansion map");
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`render_to_expansion_map`](Self::render_to_expansion_map) - Render to string
+    pub fn render_to_expansion_map_file(&self, path: &Path) -> Result<()> {
+        let path_str = path
+            .to_str()
+            .ok_or_else(|| Error::RenderError("file path contains invalid UTF-8".into()))?;
+
+        let c_path = CString::new(path_str)?;
+
+        // SAFETY: ptr is valid, c_path is a valid null-terminated string
+        let success = unsafe {
+            verovioxide_sys::vrvToolkit_renderToExpansionMapFile(self.ptr, c_path.as_ptr())
+        };
+
+        if success {
+            Ok(())
+        } else {
+            Err(Error::RenderError(format!(
+                "failed to save expansion map to file: {}",
+                path.display()
+            )))
+        }
+    }
+
+    /// Renders the timemap and saves to a file.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - Path to the output file
+    /// * `options` - Optional JSON string with timemap options
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - No data has been loaded
+    /// - The path contains invalid UTF-8
+    /// - Writing the file fails
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    /// use std::path::Path;
+    ///
+    /// let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// // ... load data ...
+    /// toolkit.render_to_timemap_file(Path::new("timemap.json"), None)
+    ///     .expect("Failed to save timemap");
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`render_to_timemap`](Self::render_to_timemap) - Render to string
+    /// - [`render_to_timemap_with_options`](Self::render_to_timemap_with_options) - Render with options
+    pub fn render_to_timemap_file(&self, path: &Path, options: Option<&str>) -> Result<()> {
+        let path_str = path
+            .to_str()
+            .ok_or_else(|| Error::RenderError("file path contains invalid UTF-8".into()))?;
+
+        let c_path = CString::new(path_str)?;
+        let c_options = CString::new(options.unwrap_or("{}"))?;
+
+        // SAFETY: ptr is valid, c_path and c_options are valid null-terminated strings
+        let success = unsafe {
+            verovioxide_sys::vrvToolkit_renderToTimemapFile(
+                self.ptr,
+                c_path.as_ptr(),
+                c_options.as_ptr(),
+            )
+        };
+
+        if success {
+            Ok(())
+        } else {
+            Err(Error::RenderError(format!(
+                "failed to save timemap to file: {}",
+                path.display()
+            )))
+        }
+    }
+
+    /// Saves the document to a file with options.
+    ///
+    /// This method saves the currently loaded document to a file. The output
+    /// format depends on the options and the configured output format.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - Path to the output file
+    /// * `options` - Optional JSON string with save options
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - No data has been loaded
+    /// - The path contains invalid UTF-8
+    /// - Writing the file fails
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    /// use std::path::Path;
+    ///
+    /// let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// // ... load data ...
+    /// toolkit.save_file(Path::new("output.mei"), None)
+    ///     .expect("Failed to save file");
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`get_mei`](Self::get_mei) - Get MEI as string
+    /// - [`set_output_to`](Self::set_output_to) - Set output format
+    pub fn save_file(&self, path: &Path, options: Option<&str>) -> Result<()> {
+        let path_str = path
+            .to_str()
+            .ok_or_else(|| Error::RenderError("file path contains invalid UTF-8".into()))?;
+
+        let c_path = CString::new(path_str)?;
+        let c_options = CString::new(options.unwrap_or("{}"))?;
+
+        // SAFETY: ptr is valid, c_path and c_options are valid null-terminated strings
+        let success = unsafe {
+            verovioxide_sys::vrvToolkit_saveFile(self.ptr, c_path.as_ptr(), c_options.as_ptr())
+        };
+
+        if success {
+            Ok(())
+        } else {
+            Err(Error::RenderError(format!(
+                "failed to save to file: {}",
+                path.display()
+            )))
+        }
+    }
+
+    /// Saves the Humdrum representation to a file.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - Path to the output file
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - No data has been loaded
+    /// - The path contains invalid UTF-8
+    /// - Writing the file fails
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    /// use std::path::Path;
+    ///
+    /// let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// // ... load data ...
+    /// toolkit.save_humdrum_to_file(Path::new("output.krn"))
+    ///     .expect("Failed to save Humdrum");
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`get_humdrum`](Self::get_humdrum) - Get Humdrum as string
+    pub fn save_humdrum_to_file(&self, path: &Path) -> Result<()> {
+        let path_str = path
+            .to_str()
+            .ok_or_else(|| Error::RenderError("file path contains invalid UTF-8".into()))?;
+
+        let c_path = CString::new(path_str)?;
+
+        // SAFETY: ptr is valid, c_path is a valid null-terminated string
+        let success =
+            unsafe { verovioxide_sys::vrvToolkit_getHumdrumFile(self.ptr, c_path.as_ptr()) };
+
+        if success {
+            Ok(())
+        } else {
+            Err(Error::RenderError(format!(
+                "failed to save Humdrum to file: {}",
+                path.display()
+            )))
+        }
     }
 
     /// Gets the current rendering scale as a percentage.
@@ -1124,6 +2081,229 @@ impl Toolkit {
             unsafe { verovioxide_sys::vrvToolkit_getTimeForElement(self.ptr, c_id.as_ptr()) };
 
         Ok(time)
+    }
+
+    /// Gets expansion IDs for an element.
+    ///
+    /// When working with documents that contain expansion elements (e.g., repeats),
+    /// this method returns the expansion IDs associated with a given element.
+    ///
+    /// # Arguments
+    ///
+    /// * `xml_id` - The xml:id of the element
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The xml_id contains a null byte
+    /// - The query fails
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    ///
+    /// let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// // ... load data with expansion elements ...
+    ///
+    /// let expansion_ids = toolkit.get_expansion_ids_for_element("note-0001")
+    ///     .expect("Failed to get expansion IDs");
+    /// println!("Expansion IDs: {}", expansion_ids);
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`render_to_expansion_map`](Self::render_to_expansion_map) - Get the full expansion map
+    /// - [`get_notated_id_for_element`](Self::get_notated_id_for_element) - Get notated ID
+    pub fn get_expansion_ids_for_element(&self, xml_id: &str) -> Result<String> {
+        let c_id = CString::new(xml_id)?;
+
+        // SAFETY: ptr is valid, c_id is a valid null-terminated string
+        let result_ptr = unsafe {
+            verovioxide_sys::vrvToolkit_getExpansionIdsForElement(self.ptr, c_id.as_ptr())
+        };
+
+        self.ptr_to_string(result_ptr).ok_or_else(|| {
+            Error::RenderError(format!(
+                "failed to get expansion IDs for element: {}",
+                xml_id
+            ))
+        })
+    }
+
+    /// Gets MIDI values for an element.
+    ///
+    /// Returns MIDI-related information (pitch, velocity, etc.) for a specific element.
+    ///
+    /// # Arguments
+    ///
+    /// * `xml_id` - The xml:id of the element
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The xml_id contains a null byte
+    /// - The query fails
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    ///
+    /// let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// // ... load data ...
+    ///
+    /// let midi_values = toolkit.get_midi_values_for_element("note-0001")
+    ///     .expect("Failed to get MIDI values");
+    /// println!("MIDI values: {}", midi_values);
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`render_to_midi`](Self::render_to_midi) - Render full MIDI
+    /// - [`get_time_for_element`](Self::get_time_for_element) - Get timing for element
+    pub fn get_midi_values_for_element(&self, xml_id: &str) -> Result<String> {
+        let c_id = CString::new(xml_id)?;
+
+        // SAFETY: ptr is valid, c_id is a valid null-terminated string
+        let result_ptr =
+            unsafe { verovioxide_sys::vrvToolkit_getMIDIValuesForElement(self.ptr, c_id.as_ptr()) };
+
+        self.ptr_to_string(result_ptr).ok_or_else(|| {
+            Error::RenderError(format!(
+                "failed to get MIDI values for element: {}",
+                xml_id
+            ))
+        })
+    }
+
+    /// Gets the notated ID for an element.
+    ///
+    /// When working with expansions, elements may have different rendered IDs
+    /// than their notated IDs. This method returns the original notated ID
+    /// for a given element.
+    ///
+    /// # Arguments
+    ///
+    /// * `xml_id` - The xml:id of the element (possibly a rendered ID)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The xml_id contains a null byte
+    /// - The query fails
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    ///
+    /// let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// // ... load data ...
+    ///
+    /// let notated_id = toolkit.get_notated_id_for_element("rendered-note-0001")
+    ///     .expect("Failed to get notated ID");
+    /// println!("Notated ID: {}", notated_id);
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`get_expansion_ids_for_element`](Self::get_expansion_ids_for_element) - Get expansion IDs
+    /// - [`render_to_expansion_map`](Self::render_to_expansion_map) - Get the full expansion map
+    pub fn get_notated_id_for_element(&self, xml_id: &str) -> Result<String> {
+        let c_id = CString::new(xml_id)?;
+
+        // SAFETY: ptr is valid, c_id is a valid null-terminated string
+        let result_ptr =
+            unsafe { verovioxide_sys::vrvToolkit_getNotatedIdForElement(self.ptr, c_id.as_ptr()) };
+
+        self.ptr_to_string(result_ptr).ok_or_else(|| {
+            Error::RenderError(format!("failed to get notated ID for element: {}", xml_id))
+        })
+    }
+
+    /// Gets timing information for an element.
+    ///
+    /// Returns detailed timing information including onset time, offset time,
+    /// and duration for a specific element.
+    ///
+    /// # Arguments
+    ///
+    /// * `xml_id` - The xml:id of the element
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The xml_id contains a null byte
+    /// - The query fails
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    ///
+    /// let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// // ... load data ...
+    ///
+    /// let times = toolkit.get_times_for_element("note-0001")
+    ///     .expect("Failed to get times");
+    /// println!("Timing info: {}", times);
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`get_time_for_element`](Self::get_time_for_element) - Get simple time value
+    /// - [`render_to_timemap`](Self::render_to_timemap) - Get full timemap
+    pub fn get_times_for_element(&self, xml_id: &str) -> Result<String> {
+        let c_id = CString::new(xml_id)?;
+
+        // SAFETY: ptr is valid, c_id is a valid null-terminated string
+        let result_ptr =
+            unsafe { verovioxide_sys::vrvToolkit_getTimesForElement(self.ptr, c_id.as_ptr()) };
+
+        self.ptr_to_string(result_ptr).ok_or_else(|| {
+            Error::RenderError(format!("failed to get times for element: {}", xml_id))
+        })
+    }
+
+    /// Gets descriptive features from the document.
+    ///
+    /// Extracts descriptive features and metadata from the loaded document,
+    /// useful for analysis and categorization.
+    ///
+    /// # Arguments
+    ///
+    /// * `options` - Optional JSON string with feature extraction options
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - No data has been loaded
+    /// - The options contain a null byte
+    /// - Feature extraction fails
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    ///
+    /// let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+    /// // ... load data ...
+    ///
+    /// let features = toolkit.get_descriptive_features(None)
+    ///     .expect("Failed to get features");
+    /// println!("Features: {}", features);
+    /// ```
+    pub fn get_descriptive_features(&self, options: Option<&str>) -> Result<String> {
+        let c_options = CString::new(options.unwrap_or("{}"))?;
+
+        // SAFETY: ptr is valid, c_options is a valid null-terminated string
+        let result_ptr = unsafe {
+            verovioxide_sys::vrvToolkit_getDescriptiveFeatures(self.ptr, c_options.as_ptr())
+        };
+
+        self.ptr_to_string(result_ptr)
+            .ok_or_else(|| Error::RenderError("failed to get descriptive features".into()))
     }
 
     /// Redoes the layout with optional new options.
