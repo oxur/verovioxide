@@ -522,3 +522,73 @@ fn test_logging() {
     // Disable logging
     Toolkit::enable_log_to_buffer(false);
 }
+
+// =============================================================================
+// README Example Tests
+// =============================================================================
+// These tests verify that the code examples in the README compile and work.
+
+/// Path to test fixtures relative to workspace root.
+fn fixture_path(relative: &str) -> std::path::PathBuf {
+    let manifest_dir = env!("CARGO_MANIFEST_DIR");
+    std::path::PathBuf::from(manifest_dir)
+        .join("../../test-fixtures")
+        .join(relative)
+}
+
+/// Test the unified load() method with string data (README Quick Start pattern).
+#[test]
+fn test_readme_load_string_data() {
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+
+    // This mirrors the README pattern of loading MEI data
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    assert!(voxide.page_count() > 0);
+}
+
+/// Test the unified load() method with Path (README Quick Start pattern).
+#[test]
+fn test_readme_load_path() {
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+
+    // This mirrors the README: voxide.load(Path::new("score.musicxml"))?;
+    let path = fixture_path("musicxml/simple.musicxml");
+    voxide.load(path.as_path()).expect("Failed to load file");
+
+    assert!(voxide.page_count() > 0);
+}
+
+/// Test the unified load() method with PathBuf reference.
+#[test]
+fn test_readme_load_pathbuf() {
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+
+    let path = fixture_path("mei/simple.mei");
+    voxide.load(&path).expect("Failed to load file");
+
+    assert!(voxide.page_count() > 0);
+}
+
+/// Test the README Quick Start example pattern.
+#[test]
+fn test_readme_quick_start_pattern() {
+    // This is the exact pattern from the README Quick Start section
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+
+    // Load notation (format auto-detected)
+    let path = fixture_path("musicxml/simple.musicxml");
+    voxide.load(path.as_path()).expect("Failed to load");
+
+    // Configure rendering
+    let options = Options::builder()
+        .scale(100)
+        .adjust_page_height(true)
+        .build();
+    voxide.set_options(&options).expect("Failed to set options");
+
+    // Render to SVG
+    let svg = voxide.render_to_svg(1).expect("Failed to render");
+
+    assert_valid_svg(&svg);
+}
