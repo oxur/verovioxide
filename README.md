@@ -16,6 +16,7 @@
 - **Bundled fonts**: Leipzig, Bravura, Gootville, Leland, and Petaluma (SMuFL-compliant)
 - **Type-safe API**: Builder pattern for options with serde serialization
 - **Zero runtime dependencies**: Verovio statically linked
+- **Complete API coverage**: 100% of the Verovio C API wrapped in safe Rust
 - **Production ready**: Comprehensive error handling and 95%+ test coverage
 
 ## Installation
@@ -39,8 +40,8 @@ Or in your `Cargo.toml`:
 
 ```toml
 [dependencies]
-verovioxide = "0.1"
-verovioxide-sys = { version = "0.1", features = ["prebuilt"] }
+verovioxide = "0.2"
+verovioxide-sys = { version = "0.2", features = ["prebuilt"] }
 ```
 
 Prebuilt binaries are available for:
@@ -336,7 +337,7 @@ The `prebuilt` and `bundled` features can be used together - if prebuilt downloa
 
 ```toml
 [dependencies]
-verovioxide = { version = "0.1", features = ["font-bravura", "font-leland"] }
+verovioxide = { version = "0.2", features = ["font-bravura", "font-leland"] }
 ```
 
 ### Custom Resource Path
@@ -345,7 +346,7 @@ To use your own Verovio resources instead of bundled data:
 
 ```toml
 [dependencies]
-verovioxide = { version = "0.1", default-features = false }
+verovioxide = { version = "0.2", default-features = false }
 ```
 
 ```rust
