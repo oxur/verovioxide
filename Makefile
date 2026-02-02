@@ -221,7 +221,7 @@ format:
 coverage:
 	@echo "$(BLUE)Generating test coverage report...$(RESET)"
 	@echo "$(CYAN)• Running tests with coverage...$(RESET)"
-	@cargo llvm-cov --lib --workspace --ignore-filename-regex 'verovioxide-sys'
+	@cargo llvm-cov --workspace --ignore-filename-regex 'verovioxide-sys'
 	@echo "$(GREEN)✓ Coverage report generated$(RESET)"
 	@echo "$(YELLOW)→ For detailed HTML report, run: make coverage-html$(RESET)"
 

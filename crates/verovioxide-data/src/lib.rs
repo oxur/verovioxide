@@ -377,4 +377,114 @@ mod tests {
             "text/Times.xml should exist in text directory"
         );
     }
+
+    #[test]
+    fn test_default_font_returns_valid_font() {
+        let font = default_font();
+        // Should be either Leipzig or Bravura
+        assert!(
+            font == "Leipzig" || font == "Bravura",
+            "Default font should be Leipzig or Bravura, got: {}",
+            font
+        );
+    }
+
+    #[test]
+    fn test_available_fonts_not_empty() {
+        let fonts = available_fonts();
+        assert!(!fonts.is_empty(), "Should have at least one font available");
+    }
+
+    #[test]
+    fn test_available_fonts_no_duplicates() {
+        let fonts = available_fonts();
+        let mut seen = std::collections::HashSet::new();
+        for font in &fonts {
+            assert!(
+                seen.insert(*font),
+                "Font {} appears more than once",
+                font
+            );
+        }
+    }
+
+    #[test]
+    fn test_extract_resources_preserves_content() {
+        let temp_dir = extract_resources().expect("Failed to extract resources");
+
+        // Read extracted file
+        let extracted_path = temp_dir.path().join("Bravura.xml");
+        let extracted_content = std::fs::read_to_string(&extracted_path)
+            .expect("Failed to read extracted file");
+
+        // Read embedded file
+        let dir = resource_dir();
+        let embedded = dir.get_file("Bravura.xml").expect("Bravura.xml should exist");
+        let embedded_content = embedded.contents_utf8().expect("Should be valid UTF-8");
+
+        assert_eq!(
+            extracted_content, embedded_content,
+            "Extracted content should match embedded content"
+        );
+    }
+
+    #[test]
+    fn test_data_error_display() {
+        // Test error Display implementations for coverage
+        let err = DataError::TempDirCreation(std::io::Error::new(
+            std::io::ErrorKind::PermissionDenied,
+            "test error",
+        ));
+        let msg = format!("{}", err);
+        assert!(msg.contains("temporary directory"));
+
+        let err = DataError::DirectoryCreation {
+            path: "/test/path".to_string(),
+            source: std::io::Error::new(std::io::ErrorKind::PermissionDenied, "test"),
+        };
+        let msg = format!("{}", err);
+        assert!(msg.contains("/test/path"));
+
+        let err = DataError::FileWrite {
+            path: "/test/file.txt".to_string(),
+            source: std::io::Error::new(std::io::ErrorKind::PermissionDenied, "test"),
+        };
+        let msg = format!("{}", err);
+        assert!(msg.contains("/test/file.txt"));
+    }
+
+    #[test]
+    fn test_data_error_debug() {
+        let err = DataError::TempDirCreation(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "test",
+        ));
+        let _ = format!("{:?}", err);
+
+        let err = DataError::DirectoryCreation {
+            path: "test".to_string(),
+            source: std::io::Error::new(std::io::ErrorKind::Other, "test"),
+        };
+        let _ = format!("{:?}", err);
+
+        let err = DataError::FileWrite {
+            path: "test".to_string(),
+            source: std::io::Error::new(std::io::ErrorKind::Other, "test"),
+        };
+        let _ = format!("{:?}", err);
+    }
+
+    #[test]
+    fn test_resource_dir_files_iteration() {
+        let dir = resource_dir();
+        let file_count = dir.files().count();
+        assert!(file_count > 0, "Should have at least one file in root");
+    }
+
+    #[test]
+    fn test_resource_dir_dirs_iteration() {
+        let dir = resource_dir();
+        let dir_count = dir.dirs().count();
+        assert!(dir_count > 0, "Should have at least one subdirectory");
+    }
 }

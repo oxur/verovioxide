@@ -669,4 +669,90 @@ mod tests {
         assert_send::<Timemap>();
         assert_send::<Mei>();
     }
+
+    #[test]
+    fn test_mei_options_scorebased() {
+        let opts = Mei::with_options().scorebased_mei(true);
+        assert!(opts.to_json().contains("\"scoreBasedMei\":true"));
+
+        let opts = Mei::with_options()
+            .remove_ids(true)
+            .page_based(false)
+            .scorebased_mei(true);
+        assert!(opts.to_json().contains("\"removeIds\":true"));
+        assert!(opts.to_json().contains("\"pageBasedMei\":false"));
+        assert!(opts.to_json().contains("\"scoreBasedMei\":true"));
+    }
+
+    #[test]
+    fn test_svg_page_accessors() {
+        let spec = Svg::page(5);
+        assert_eq!(spec.page(), 5);
+    }
+
+    #[test]
+    fn test_svg_pages_range() {
+        let spec = Svg::pages(3, 7);
+        assert_eq!(spec.start, 3);
+        assert_eq!(spec.end, 7);
+    }
+
+    #[test]
+    fn test_timemap_options_default_empty() {
+        let opts = TimemapOptionsBuilder::default();
+        assert_eq!(opts.to_json(), "{}");
+    }
+
+    #[test]
+    fn test_timemap_options_rests_only() {
+        let opts = Timemap::with_options().include_rests(true);
+        assert_eq!(opts.to_json(), "{\"includeRests\":true}");
+    }
+
+    #[test]
+    fn test_mei_options_page_based_only() {
+        let opts = Mei::with_options().page_based(true);
+        assert_eq!(opts.to_json(), "{\"pageBasedMei\":true}");
+    }
+
+    #[test]
+    fn test_format_debug_impls() {
+        // Test Debug implementations for coverage
+        let _ = format!("{:?}", Svg::page(1));
+        let _ = format!("{:?}", Svg::pages(1, 2));
+        let _ = format!("{:?}", Svg::all_pages());
+        let _ = format!("{:?}", Midi);
+        let _ = format!("{:?}", Pae);
+        let _ = format!("{:?}", ExpansionMap);
+        let _ = format!("{:?}", Humdrum);
+        let _ = format!("{:?}", Timemap);
+        let _ = format!("{:?}", Mei);
+        let _ = format!("{:?}", Timemap::with_options());
+        let _ = format!("{:?}", Mei::with_options());
+    }
+
+    #[test]
+    fn test_format_clone_impls() {
+        // Test Clone implementations for coverage
+        let page = Svg::page(1);
+        let _cloned = page.clone();
+
+        let pages = Svg::pages(1, 2);
+        let _cloned = pages.clone();
+
+        let all = Svg::all_pages();
+        let _cloned = all.clone();
+
+        let midi = Midi;
+        let _cloned = midi;
+
+        let pae = Pae;
+        let _cloned = pae;
+
+        let opts = Timemap::with_options().include_measures(true);
+        let _cloned = opts.clone();
+
+        let opts = Mei::with_options().remove_ids(true);
+        let _cloned = opts.clone();
+    }
 }

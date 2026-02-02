@@ -568,4 +568,73 @@ mod tests {
         assert_send::<Features>();
         assert_send::<FeaturesOptionsBuilder>();
     }
+
+    #[test]
+    fn test_query_types_debug() {
+        // Test Debug implementations for coverage
+        let _ = format!("{:?}", Page::of("test"));
+        let _ = format!("{:?}", Attrs::of("test"));
+        let _ = format!("{:?}", Time::of("test"));
+        let _ = format!("{:?}", Times::of("test"));
+        let _ = format!("{:?}", ExpansionIds::of("test"));
+        let _ = format!("{:?}", MidiValues::of("test"));
+        let _ = format!("{:?}", NotatedId::of("test"));
+        let _ = format!("{:?}", Elements::at(1000));
+        let _ = format!("{:?}", Features);
+        let _ = format!("{:?}", Features::with_options());
+    }
+
+    #[test]
+    fn test_query_types_clone() {
+        // Test Clone implementations for coverage
+        let page = Page::of("test");
+        let _cloned = page.clone();
+
+        let attrs = Attrs::of("test");
+        let _cloned = attrs.clone();
+
+        let time = Time::of("test");
+        let _cloned = time.clone();
+
+        let times = Times::of("test");
+        let _cloned = times.clone();
+
+        let expansion = ExpansionIds::of("test");
+        let _cloned = expansion.clone();
+
+        let midi = MidiValues::of("test");
+        let _cloned = midi.clone();
+
+        let notated = NotatedId::of("test");
+        let _cloned = notated.clone();
+
+        let elements = Elements::at(1000);
+        let _cloned = elements;
+
+        let features = Features;
+        let _cloned = features;
+
+        let opts = Features::with_options().option("key", "value");
+        let _cloned = opts.clone();
+    }
+
+    #[test]
+    fn test_features_options_single_value() {
+        let builder = Features::with_options().option("single", "value");
+        let json = builder.to_json();
+        assert_eq!(json, "{\"single\":\"value\"}");
+    }
+
+    #[test]
+    fn test_elements_negative_time() {
+        // Test that Elements works with edge case values
+        let query = Elements::at(-1);
+        assert_eq!(query.millisec, -1);
+
+        let query = Elements::at(0);
+        assert_eq!(query.millisec, 0);
+
+        let query = Elements::at(i32::MAX);
+        assert_eq!(query.millisec, i32::MAX);
+    }
 }
