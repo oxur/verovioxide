@@ -7,6 +7,7 @@
 //! - Format conversion (e.g., MusicXML to MEI)
 //! - Error handling for invalid input
 
+use serial_test::serial;
 use verovioxide::{Options, Toolkit};
 
 // =============================================================================
@@ -47,6 +48,7 @@ fn assert_valid_svg(svg: &str) {
 
 /// Test that a toolkit can be created with bundled resources and reports a valid version.
 #[test]
+#[serial]
 fn test_toolkit_creation() {
     let toolkit = Toolkit::new().expect("Failed to create toolkit with bundled resources");
 
@@ -65,6 +67,7 @@ fn test_toolkit_creation() {
 
 /// Test that a toolkit can be created without resources.
 #[test]
+#[serial]
 fn test_toolkit_without_resources() {
     let toolkit = Toolkit::without_resources().expect("Failed to create toolkit without resources");
     assert!(!toolkit.version().is_empty());
@@ -76,6 +79,7 @@ fn test_toolkit_without_resources() {
 
 /// Test loading and rendering a MusicXML file.
 #[test]
+#[serial]
 fn test_render_musicxml() {
     let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
 
@@ -110,6 +114,7 @@ fn test_render_musicxml() {
 
 /// Test loading and rendering an MEI file.
 #[test]
+#[serial]
 fn test_render_mei() {
     let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
 
@@ -137,6 +142,7 @@ fn test_render_mei() {
 
 /// Test loading and rendering ABC notation.
 #[test]
+#[serial]
 fn test_render_abc() {
     let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
 
@@ -160,6 +166,7 @@ fn test_render_abc() {
 
 /// Test rendering ABC notation provided inline (not from fixture file).
 #[test]
+#[serial]
 fn test_render_abc_inline() {
     let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
 
@@ -190,6 +197,7 @@ CDEF | GABC |]
 
 /// Test setting various rendering options.
 #[test]
+#[serial]
 fn test_options() {
     let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
 
@@ -224,6 +232,7 @@ fn test_options() {
 
 /// Test setting and retrieving scale independently.
 #[test]
+#[serial]
 fn test_options_scale() {
     let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
 
@@ -242,6 +251,7 @@ fn test_options_scale() {
 
 /// Test that options can be retrieved as JSON.
 #[test]
+#[serial]
 fn test_options_json() {
     let toolkit = Toolkit::new().expect("Failed to create toolkit");
 
@@ -262,6 +272,7 @@ fn test_options_json() {
 
 /// Test resetting options to defaults.
 #[test]
+#[serial]
 fn test_options_reset() {
     let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
 
@@ -293,6 +304,7 @@ fn test_options_reset() {
 
 /// Test exporting loaded MusicXML as MEI.
 #[test]
+#[serial]
 fn test_get_mei_export() {
     let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
 
@@ -321,6 +333,7 @@ fn test_get_mei_export() {
 
 /// Test exporting with options.
 #[test]
+#[serial]
 fn test_get_mei_export_with_options() {
     let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
 
@@ -343,6 +356,7 @@ fn test_get_mei_export_with_options() {
 
 /// Test that loading invalid/malformed input produces an error.
 #[test]
+#[serial]
 fn test_invalid_input() {
     let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
 
@@ -361,6 +375,7 @@ fn test_invalid_input() {
 
 /// Test that rendering with no data loaded produces an error.
 #[test]
+#[serial]
 fn test_render_no_data() {
     let toolkit = Toolkit::new().expect("Failed to create toolkit");
 
@@ -374,6 +389,7 @@ fn test_render_no_data() {
 
 /// Test that rendering an invalid page number produces an error.
 #[test]
+#[serial]
 fn test_render_invalid_page() {
     let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
 
@@ -392,6 +408,7 @@ fn test_render_invalid_page() {
 
 /// Test loading a non-existent file.
 #[test]
+#[serial]
 fn test_load_nonexistent_file() {
     let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
 
@@ -413,6 +430,7 @@ fn test_load_nonexistent_file() {
 
 /// Test rendering all pages of a document.
 #[test]
+#[serial]
 fn test_render_all_pages() {
     let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
 
@@ -442,6 +460,7 @@ fn test_render_all_pages() {
 
 /// Test rendering with XML declaration.
 #[test]
+#[serial]
 fn test_render_with_declaration() {
     let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
 
@@ -467,6 +486,7 @@ fn test_render_with_declaration() {
 
 /// Test retrieving toolkit ID.
 #[test]
+#[serial]
 fn test_toolkit_id() {
     let toolkit = Toolkit::new().expect("Failed to create toolkit");
 
@@ -476,6 +496,7 @@ fn test_toolkit_id() {
 
 /// Test retrieving resource path.
 #[test]
+#[serial]
 fn test_toolkit_resource_path() {
     let toolkit = Toolkit::new().expect("Failed to create toolkit");
 
@@ -485,6 +506,7 @@ fn test_toolkit_resource_path() {
 
 /// Test toolkit Debug implementation.
 #[test]
+#[serial]
 fn test_toolkit_debug() {
     let toolkit = Toolkit::new().expect("Failed to create toolkit");
 
@@ -505,6 +527,7 @@ fn test_toolkit_debug() {
 
 /// Test enabling and retrieving logs.
 #[test]
+#[serial]
 fn test_logging() {
     // Enable logging to buffer
     Toolkit::enable_log_to_buffer(true);
@@ -538,6 +561,7 @@ fn fixture_path(relative: &str) -> std::path::PathBuf {
 
 /// Test the unified load() method with string data (README Quick Start pattern).
 #[test]
+#[serial]
 fn test_readme_load_string_data() {
     let mut voxide = Toolkit::new().expect("Failed to create toolkit");
 
@@ -549,6 +573,7 @@ fn test_readme_load_string_data() {
 
 /// Test the unified load() method with Path (README Quick Start pattern).
 #[test]
+#[serial]
 fn test_readme_load_path() {
     let mut voxide = Toolkit::new().expect("Failed to create toolkit");
 
@@ -561,6 +586,7 @@ fn test_readme_load_path() {
 
 /// Test the unified load() method with PathBuf reference.
 #[test]
+#[serial]
 fn test_readme_load_pathbuf() {
     let mut voxide = Toolkit::new().expect("Failed to create toolkit");
 
@@ -572,6 +598,7 @@ fn test_readme_load_pathbuf() {
 
 /// Test the README Quick Start example pattern.
 #[test]
+#[serial]
 fn test_readme_quick_start_pattern() {
     // This is the exact pattern from the README Quick Start section
     let mut voxide = Toolkit::new().expect("Failed to create toolkit");
@@ -598,9 +625,11 @@ fn test_readme_quick_start_pattern() {
 // =============================================================================
 
 use verovioxide::{ExpansionMap, Humdrum, Mei, Midi, Pae, Svg, Timemap};
+use verovioxide::{Attrs, Elements, Features, Page, Time, Times};
 
 /// Test the unified render() method with Svg::page().
 #[test]
+#[serial]
 fn test_render_svg_page() {
     let mut voxide = Toolkit::new().expect("Failed to create toolkit");
     voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
@@ -611,6 +640,7 @@ fn test_render_svg_page() {
 
 /// Test the unified render() method with Svg::page() and declaration.
 #[test]
+#[serial]
 fn test_render_svg_page_with_declaration() {
     let mut voxide = Toolkit::new().expect("Failed to create toolkit");
     voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
@@ -624,6 +654,7 @@ fn test_render_svg_page_with_declaration() {
 
 /// Test the unified render() method with Svg::all_pages().
 #[test]
+#[serial]
 fn test_render_svg_all_pages() {
     let mut voxide = Toolkit::new().expect("Failed to create toolkit");
     voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
@@ -639,6 +670,7 @@ fn test_render_svg_all_pages() {
 
 /// Test the unified render() method with Svg::pages() for a range.
 #[test]
+#[serial]
 fn test_render_svg_pages_range() {
     let mut voxide = Toolkit::new().expect("Failed to create toolkit");
     voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
@@ -658,6 +690,7 @@ fn test_render_svg_pages_range() {
 
 /// Test the unified render() method with Midi.
 #[test]
+#[serial]
 fn test_render_midi() {
     let mut voxide = Toolkit::new().expect("Failed to create toolkit");
     voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
@@ -669,6 +702,7 @@ fn test_render_midi() {
 
 /// Test the unified render() method with Pae.
 #[test]
+#[serial]
 fn test_render_pae() {
     let mut voxide = Toolkit::new().expect("Failed to create toolkit");
     voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
@@ -679,6 +713,7 @@ fn test_render_pae() {
 
 /// Test the unified render() method with Timemap.
 #[test]
+#[serial]
 fn test_render_timemap() {
     let mut voxide = Toolkit::new().expect("Failed to create toolkit");
     voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
@@ -694,6 +729,7 @@ fn test_render_timemap() {
 
 /// Test the unified render() method with Timemap options.
 #[test]
+#[serial]
 fn test_render_timemap_with_options() {
     let mut voxide = Toolkit::new().expect("Failed to create toolkit");
     voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
@@ -707,6 +743,7 @@ fn test_render_timemap_with_options() {
 
 /// Test the unified render() method with ExpansionMap.
 #[test]
+#[serial]
 fn test_render_expansion_map() {
     let mut voxide = Toolkit::new().expect("Failed to create toolkit");
     voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
@@ -724,6 +761,7 @@ fn test_render_expansion_map() {
 
 /// Test the unified render() method with Mei.
 #[test]
+#[serial]
 fn test_render_unified_mei() {
     let mut voxide = Toolkit::new().expect("Failed to create toolkit");
     voxide.load(SIMPLE_MUSICXML).expect("Failed to load MusicXML");
@@ -735,6 +773,7 @@ fn test_render_unified_mei() {
 
 /// Test the unified render() method with Mei options.
 #[test]
+#[serial]
 fn test_render_mei_with_options() {
     let mut voxide = Toolkit::new().expect("Failed to create toolkit");
     voxide.load(SIMPLE_MUSICXML).expect("Failed to load MusicXML");
@@ -747,6 +786,7 @@ fn test_render_mei_with_options() {
 
 /// Test the unified render() method with Humdrum.
 #[test]
+#[serial]
 fn test_render_humdrum() {
     let mut voxide = Toolkit::new().expect("Failed to create toolkit");
     voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
@@ -758,6 +798,7 @@ fn test_render_humdrum() {
 
 /// Test render_to() with format inference from .svg extension.
 #[test]
+#[serial]
 fn test_render_to_svg_file() {
     let mut voxide = Toolkit::new().expect("Failed to create toolkit");
     voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
@@ -775,6 +816,7 @@ fn test_render_to_svg_file() {
 
 /// Test render_to() with format inference from .mid extension.
 #[test]
+#[serial]
 fn test_render_to_midi_file() {
     let mut voxide = Toolkit::new().expect("Failed to create toolkit");
     voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
@@ -793,6 +835,7 @@ fn test_render_to_midi_file() {
 
 /// Test render_to() with format inference from .mei extension.
 #[test]
+#[serial]
 fn test_render_to_mei_file() {
     let mut voxide = Toolkit::new().expect("Failed to create toolkit");
     voxide.load(SIMPLE_MUSICXML).expect("Failed to load MusicXML");
@@ -810,6 +853,7 @@ fn test_render_to_mei_file() {
 
 /// Test render_to_as() with explicit Svg::page().
 #[test]
+#[serial]
 fn test_render_to_as_svg_page() {
     let mut voxide = Toolkit::new().expect("Failed to create toolkit");
     voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
@@ -827,6 +871,7 @@ fn test_render_to_as_svg_page() {
 
 /// Test render_to_as() with Svg::all_pages() creates directory.
 #[test]
+#[serial]
 fn test_render_to_as_svg_all_pages_creates_directory() {
     let mut voxide = Toolkit::new().expect("Failed to create toolkit");
     voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
@@ -853,6 +898,7 @@ fn test_render_to_as_svg_all_pages_creates_directory() {
 
 /// Test render_to_as() with Timemap for .json files.
 #[test]
+#[serial]
 fn test_render_to_as_timemap_json() {
     let mut voxide = Toolkit::new().expect("Failed to create toolkit");
     voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
@@ -871,6 +917,7 @@ fn test_render_to_as_timemap_json() {
 
 /// Test that render_to() fails for ambiguous .json extension.
 #[test]
+#[serial]
 fn test_render_to_json_fails_ambiguous() {
     let mut voxide = Toolkit::new().expect("Failed to create toolkit");
     voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
@@ -885,5 +932,195 @@ fn test_render_to_json_fails_ambiguous() {
         err.contains("ambiguous"),
         "Error should mention ambiguity: {}",
         err
+    );
+}
+
+// =============================================================================
+// Unified Query API Tests
+// =============================================================================
+
+/// Test the unified get() method with Page query.
+#[test]
+#[serial]
+fn test_query_page() {
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    // First render to generate data
+    let _svg: String = voxide.render(Svg::page(1)).expect("Failed to render");
+
+    // Get timemap to find note IDs (these are MEI element IDs, not SVG IDs)
+    let timemap: String = voxide.render(Timemap).expect("Failed to render timemap");
+
+    // Find an "id" field in the timemap (MEI element ID)
+    if let Some(pos) = timemap.find("\"id\":\"") {
+        let start = pos + 6;
+        if let Some(end) = timemap[start..].find('"') {
+            let note_id = &timemap[start..start + end];
+            // Query which page this element is on
+            let page: u32 = voxide
+                .get(Page::of(note_id))
+                .expect("Failed to get page");
+            assert_eq!(page, 1, "Element should be on page 1");
+        }
+    }
+}
+
+/// Test the unified get() method with Attrs query.
+#[test]
+#[serial]
+fn test_query_attrs() {
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    // First render to generate data
+    let _svg: String = voxide.render(Svg::page(1)).expect("Failed to render");
+
+    // Get timemap to find note IDs (these are MEI element IDs)
+    let timemap: String = voxide.render(Timemap).expect("Failed to render timemap");
+
+    // Find an "id" field in the timemap (MEI element ID)
+    if let Some(pos) = timemap.find("\"id\":\"") {
+        let start = pos + 6;
+        if let Some(end) = timemap[start..].find('"') {
+            let note_id = &timemap[start..start + end];
+            // Query attributes
+            let attrs: String = voxide
+                .get(Attrs::of(note_id))
+                .expect("Failed to get attrs");
+            // Attributes should be JSON
+            assert!(
+                attrs.starts_with('{') || attrs == "{}",
+                "Attrs should be JSON: {}",
+                attrs
+            );
+        }
+    }
+}
+
+/// Test the unified get() method with Time query.
+#[test]
+#[serial]
+fn test_query_time() {
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    // First render to generate timing data
+    let _svg: String = voxide.render(Svg::page(1)).expect("Failed to render");
+
+    // Get timemap to find note IDs
+    let timemap: String = voxide.render(Timemap).expect("Failed to render timemap");
+
+    // If timemap contains note IDs, we can query their times
+    if timemap.contains("\"on\":") {
+        // Find an "id" field in the timemap
+        if let Some(pos) = timemap.find("\"id\":\"") {
+            let start = pos + 6;
+            if let Some(end) = timemap[start..].find('"') {
+                let note_id = &timemap[start..start + end];
+                // Query time for this note
+                let time: f64 = voxide.get(Time::of(note_id)).expect("Failed to get time");
+                assert!(time >= 0.0, "Time should be non-negative");
+            }
+        }
+    }
+}
+
+/// Test the unified get() method with Times query.
+#[test]
+#[serial]
+fn test_query_times() {
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    // First render to generate timing data
+    let _svg: String = voxide.render(Svg::page(1)).expect("Failed to render");
+
+    // Get timemap to find note IDs
+    let timemap: String = voxide.render(Timemap).expect("Failed to render timemap");
+
+    // If timemap contains note IDs, we can query their times
+    if timemap.contains("\"on\":") {
+        // Find an "id" field in the timemap
+        if let Some(pos) = timemap.find("\"id\":\"") {
+            let start = pos + 6;
+            if let Some(end) = timemap[start..].find('"') {
+                let note_id = &timemap[start..start + end];
+                // Query times for this note (returns JSON array)
+                let times: String = voxide
+                    .get(Times::of(note_id))
+                    .expect("Failed to get times");
+                // Times should be JSON array
+                assert!(
+                    times.starts_with('[') || times.starts_with('{'),
+                    "Times should be JSON: {}",
+                    times
+                );
+            }
+        }
+    }
+}
+
+/// Test the unified get() method with Elements query.
+#[test]
+#[serial]
+fn test_query_elements_at_time() {
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    // First render to generate timing data
+    let _svg: String = voxide.render(Svg::page(1)).expect("Failed to render");
+
+    // Query elements at time 0 (should include initial notes)
+    let elements: String = voxide
+        .get(Elements::at(0))
+        .expect("Failed to get elements at time");
+
+    // Elements should be JSON
+    let trimmed = elements.trim();
+    assert!(
+        trimmed.starts_with('[') || trimmed.starts_with('{'),
+        "Elements should be JSON: {}",
+        elements
+    );
+}
+
+/// Test the unified get() method with Features query.
+#[test]
+#[serial]
+fn test_query_features() {
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    // Query descriptive features
+    let features: String = voxide.get(Features).expect("Failed to get features");
+
+    // Features should be JSON
+    let trimmed = features.trim();
+    assert!(
+        trimmed.starts_with('[') || trimmed.starts_with('{'),
+        "Features should be JSON: {}",
+        features
+    );
+}
+
+/// Test the unified get() method with Features options.
+#[test]
+#[serial]
+fn test_query_features_with_options() {
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    // Query descriptive features with options
+    let features: String = voxide
+        .get(Features::with_options().option("key", "value"))
+        .expect("Failed to get features");
+
+    // Features should be JSON
+    let trimmed = features.trim();
+    assert!(
+        trimmed.starts_with('[') || trimmed.starts_with('{'),
+        "Features should be JSON: {}",
+        features
     );
 }

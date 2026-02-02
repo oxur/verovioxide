@@ -162,32 +162,55 @@ let timemap = voxide.render_to_timemap()?;
 
 ## Querying Elements
 
-### Find Elements by Time
+Verovioxide provides a unified query API with type-safe return values.
+
+### Element Queries
+
+Use `get()` with query types for type-safe element information:
 
 ```rust
-// Get elements sounding at a specific time (milliseconds)
-let elements_json = voxide.get_elements_at_time(5000)?;
+use verovioxide::{Toolkit, Page, Attrs, Time, Times};
+
+let mut voxide = Toolkit::new()?;
+voxide.load("score.mei")?;
+
+// Get page containing an element
+let page: u32 = voxide.get(Page::of("note-001"))?;
+
+// Get element attributes as JSON
+let attrs: String = voxide.get(Attrs::of("note-001"))?;
+
+// Get timing information
+let time: f64 = voxide.get(Time::of("note-001"))?;
+let times: String = voxide.get(Times::of("note-001"))?;
 ```
 
-### Get Time for Element
+### Time-Based Queries
 
 ```rust
-// Get timing for a specific element
-let time_ms = voxide.get_time_for_element("note-0000001")?;
+use verovioxide::{Toolkit, Elements};
+
+// Get elements sounding at 5000ms
+let elements: String = voxide.get(Elements::at(5000))?;
 ```
 
-### Find Page by Element
+### Descriptive Features
 
 ```rust
-// Find which page contains an element
-let page = voxide.get_page_with_element("measure-0000001")?;
+use verovioxide::{Toolkit, Features};
+
+let features: String = voxide.get(Features)?;
 ```
 
-### Get Element Attributes
+### Legacy Methods
+
+The original query methods remain available for backwards compatibility:
 
 ```rust
-// Get attributes of an element as JSON
-let attrs = voxide.get_element_attr("note-0000001")?;
+let page = voxide.get_page_with_element("note-001")?;
+let attrs = voxide.get_element_attr("note-001")?;
+let time = voxide.get_time_for_element("note-001")?;
+let elements = voxide.get_elements_at_time(5000)?;
 ```
 
 ## Configuration

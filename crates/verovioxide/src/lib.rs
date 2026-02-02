@@ -258,12 +258,17 @@
 
 mod error;
 mod options;
+mod query;
 mod render;
 mod toolkit;
 
 pub use error::{Error, Result};
 pub use options::{
     BreakMode, CondenseMode, FooterMode, HeaderMode, Options, OptionsBuilder, TextFont,
+};
+pub use query::{
+    Attrs, Elements, ExpansionIds, Features, FeaturesOptionsBuilder, MidiValues, NotatedId, Page,
+    QueryOutput, Time, Times,
 };
 pub use render::{
     ExpansionMap, Humdrum, Mei, MeiOptionsBuilder, Midi, Pae, RenderOutput, RenderSpec, Svg,

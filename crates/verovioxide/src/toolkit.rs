@@ -1071,6 +1071,63 @@ impl Toolkit {
     }
 
     // =========================================================================
+    // Unified Query API
+    // =========================================================================
+
+    /// Queries element or document information with type-safe output.
+    ///
+    /// This is the unified query API that provides type-safe, consistent
+    /// access to element queries and document information. Each query type
+    /// specifies its return type, enabling compile-time type checking.
+    ///
+    /// # Query Types
+    ///
+    /// | Query | Builder | Output Type |
+    /// |-------|---------|-------------|
+    /// | Page number | [`Page::of(id)`] | `u32` |
+    /// | Attributes | [`Attrs::of(id)`] | `String` (JSON) |
+    /// | Time | [`Time::of(id)`] | `f64` (milliseconds) |
+    /// | Times | [`Times::of(id)`] | `String` (JSON) |
+    /// | Expansion IDs | [`ExpansionIds::of(id)`] | `String` (JSON) |
+    /// | MIDI values | [`MidiValues::of(id)`] | `String` (JSON) |
+    /// | Notated ID | [`NotatedId::of(id)`] | `String` |
+    /// | Elements at time | [`Elements::at(ms)`] | `String` (JSON) |
+    /// | Descriptive features | [`Features`] | `String` (JSON) |
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use verovioxide::{Toolkit, Page, Attrs, Time, Times, Elements, Features};
+    ///
+    /// let mut voxide = Toolkit::new().unwrap();
+    /// voxide.load("score.mei").unwrap();
+    ///
+    /// // Element queries
+    /// let page: u32 = voxide.get(Page::of("note-001")).unwrap();
+    /// let attrs: String = voxide.get(Attrs::of("note-001")).unwrap();
+    /// let time: f64 = voxide.get(Time::of("note-001")).unwrap();
+    /// let times: String = voxide.get(Times::of("note-001")).unwrap();
+    ///
+    /// // Time-based query
+    /// let elements: String = voxide.get(Elements::at(5000)).unwrap();
+    ///
+    /// // Descriptive features
+    /// let features: String = voxide.get(Features).unwrap();
+    /// let features: String = voxide.get(
+    ///     Features::with_options().option("key", "value")
+    /// ).unwrap();
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`get_page_with_element`](Self::get_page_with_element) - Legacy method for page lookup
+    /// - [`get_element_attr`](Self::get_element_attr) - Legacy method for attributes
+    /// - [`get_time_for_element`](Self::get_time_for_element) - Legacy method for time
+    pub fn get<Q: crate::query::QueryOutput>(&self, query: Q) -> Result<Q::Output> {
+        query.query(self)
+    }
+
+    // =========================================================================
     // Legacy Rendering Methods
     // =========================================================================
     //
