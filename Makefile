@@ -293,10 +293,8 @@ publish:
 	@for crate in $(PUBLISH_ORDER); do \
 		echo ""; \
 		echo "$(CYAN)• Publishing $$crate...$(RESET)"; \
-		cd crates/$$crate && \
-		output=$$(cargo publish 2>&1); \
+		output=$$(cd crates/$$crate && cargo publish 2>&1); \
 		result=$$?; \
-		cd ../..; \
 		if [ $$result -eq 0 ]; then \
 			echo "  $(GREEN)✓$(RESET) $$crate published successfully"; \
 			echo "  $(YELLOW)→ Waiting 6 minutes for crates.io rate limit and index update...$(RESET)"; \
@@ -326,7 +324,7 @@ publish:
 publish-dry-run:
 	@echo ""
 	@echo "$(CYAN)╔══════════════════════════════════════════════════════════╗$(RESET)"
-	@echo "$(CYAN)║$(RESET) $(BLUE)Dry Run: Publishing $(PROJECT_NAME) Crates$(RESET)                       $(CYAN)║$(RESET)"
+	@echo "$(CYAN)║$(RESET) $(BLUE)Dry Run: Publishing $(PROJECT_NAME) Crates$(RESET)                   $(CYAN)║$(RESET)"
 	@echo "$(CYAN)╚══════════════════════════════════════════════════════════╝$(RESET)"
 	@echo ""
 	@echo "$(BLUE)Publishing order (in dependency order):$(RESET)"
@@ -340,14 +338,11 @@ publish-dry-run:
 	@for crate in $(PUBLISH_ORDER); do \
 		echo ""; \
 		echo "$(CYAN)• Packaging $$crate...$(RESET)"; \
-		cd crates/$$crate && \
-		cargo package --list > /dev/null 2>&1 && \
-		cd ../..; \
-		if [ $$? -eq 0 ]; then \
+		if (cd crates/$$crate && cargo package --list > /dev/null 2>&1); then \
 			echo "  $(GREEN)✓$(RESET) $$crate is ready for publishing"; \
 		else \
 			echo "  $(RED)✗$(RESET) $$crate failed validation"; \
-			cd crates/$$crate && cargo package --list && cd ../..; \
+			(cd crates/$$crate && cargo package --list); \
 			exit 1; \
 		fi; \
 	done
