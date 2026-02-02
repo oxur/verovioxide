@@ -28,13 +28,13 @@ Note: Bravura baseline data is always included as it's required for Verovio's gl
 ```toml
 [dependencies]
 # Default: Leipzig font only
-verovioxide-data = "0.1"
+verovioxide-data = "0.2"
 
 # Specific fonts
-verovioxide-data = { version = "0.1", features = ["font-bravura", "font-leland"] }
+verovioxide-data = { version = "0.2", features = ["font-bravura", "font-leland"] }
 
 # All fonts
-verovioxide-data = { version = "0.1", features = ["all-fonts"] }
+verovioxide-data = { version = "0.2", features = ["all-fonts"] }
 ```
 
 ## Usage
@@ -62,6 +62,7 @@ for font in available_fonts() {
 This project is licensed under the Apache License 2.0.
 
 SMuFL fonts have their own licenses:
+
 - Leipzig: SIL Open Font License
 - Bravura: SIL Open Font License
 - Gootville: SIL Open Font License

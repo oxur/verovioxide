@@ -29,10 +29,11 @@ For faster initial builds, enable the `prebuilt` feature:
 
 ```toml
 [dependencies]
-verovioxide-sys = { version = "0.1", features = ["prebuilt"] }
+verovioxide-sys = { version = "0.2", features = ["prebuilt"] }
 ```
 
 Prebuilt binaries are available for:
+
 - macOS (x86_64, aarch64)
 - Linux (x86_64, aarch64)
 - Windows (x86_64 MSVC)
