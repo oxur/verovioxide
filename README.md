@@ -55,13 +55,14 @@ If prebuilt binaries aren't available for your platform, it automatically falls 
 
 ```rust
 use verovioxide::{Toolkit, Options, Result};
+use std::path::Path;
 
 fn main() -> Result<()> {
     // Create a Verovio toolkit with bundled resources
     let mut voxide = Toolkit::new()?;
 
     // Load notation (format auto-detected)
-    voxide.load_file(Path::new("score.musicxml"))?;
+    voxide.load(Path::new("score.musicxml"))?;
 
     // Configure rendering
     let options = Options::builder()
@@ -117,7 +118,7 @@ Verovioxide can convert between multiple music notation formats:
 
 ```rust
 // Load any supported format
-voxide.load_file(Path::new("score.musicxml"))?;
+voxide.load(Path::new("score.musicxml"))?;
 
 // Export as MEI
 let mei = voxide.get_mei()?;
