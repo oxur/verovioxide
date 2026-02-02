@@ -15,8 +15,8 @@ default = ["bundled-data"]
 bundled-data = ["verovioxide-data", "tempfile"]
 
 [dependencies]
-verovioxide-sys = { version = "0.1.0", path = "../verovioxide-sys" }
-verovioxide-data = { version = "0.1.0", path = "../verovioxide-data", optional = true }
+verovioxide-sys = { version = "0.2.0", path = "../verovioxide-sys" }
+verovioxide-data = { version = "0.2.0", path = "../verovioxide-data", optional = true }
 tempfile = { version = "3", optional = true }
 thiserror = "2"
 serde = { version = "1", features = ["derive"] }

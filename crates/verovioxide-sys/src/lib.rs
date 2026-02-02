@@ -961,4 +961,35 @@ mod tests {
             vrvToolkit_destructor(toolkit);
         }
     }
+
+    #[test]
+    fn test_is_valid_toolkit() {
+        use crate::bindings::{is_valid_toolkit, NULL_TOOLKIT, ToolkitPtr};
+
+        // Null pointer should be invalid
+        assert!(!is_valid_toolkit(NULL_TOOLKIT));
+
+        // Non-null pointer should be valid
+        unsafe {
+            let toolkit: ToolkitPtr = vrvToolkit_constructorNoResource();
+            assert!(is_valid_toolkit(toolkit));
+            vrvToolkit_destructor(toolkit);
+        }
+    }
+
+    #[test]
+    fn test_null_toolkit_constant() {
+        use crate::bindings::NULL_TOOLKIT;
+
+        assert!(NULL_TOOLKIT.is_null());
+    }
+
+    #[test]
+    fn test_toolkit_ptr_type() {
+        use crate::bindings::ToolkitPtr;
+
+        // Verify ToolkitPtr is the correct type
+        let ptr: ToolkitPtr = std::ptr::null_mut();
+        assert!(ptr.is_null());
+    }
 }
