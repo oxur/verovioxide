@@ -264,7 +264,7 @@ pub use error::{Error, Result};
 pub use options::{
     BreakMode, CondenseMode, FooterMode, HeaderMode, Options, OptionsBuilder, TextFont,
 };
-pub use toolkit::Toolkit;
+pub use toolkit::{LoadSource, Toolkit, ZipBase64, ZipBuffer};
 
 // Re-export data crate types when bundled-data feature is enabled
 #[cfg(feature = "bundled-data")]

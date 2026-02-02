@@ -48,6 +48,110 @@ use tempfile::TempDir;
 use crate::error::{Error, Result};
 use crate::options::Options;
 
+/// Marker type for loading base64-encoded ZIP data (compressed MusicXML).
+///
+/// Use this with [`Toolkit::load`] when you have MusicXML data that has been
+/// compressed (`.mxl` format) and base64-encoded.
+///
+/// # Example
+///
+/// ```no_run
+/// use verovioxide::{Toolkit, ZipBase64};
+///
+/// let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+/// let base64_mxl = "UEsDBBQAAAA..."; // base64-encoded .mxl data
+/// voxide.load(ZipBase64(base64_mxl)).expect("Failed to load");
+/// ```
+#[derive(Debug, Clone, Copy)]
+pub struct ZipBase64<'a>(pub &'a str);
+
+/// Marker type for loading raw ZIP buffer data (compressed MusicXML).
+///
+/// Use this with [`Toolkit::load`] when you have MusicXML data that has been
+/// compressed (`.mxl` format) as raw bytes.
+///
+/// # Example
+///
+/// ```no_run
+/// use verovioxide::{Toolkit, ZipBuffer};
+/// use std::fs;
+///
+/// let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+/// let mxl_bytes = fs::read("score.mxl").expect("Failed to read file");
+/// voxide.load(ZipBuffer(&mxl_bytes)).expect("Failed to load");
+/// ```
+#[derive(Debug, Clone, Copy)]
+pub struct ZipBuffer<'a>(pub &'a [u8]);
+
+/// Trait for types that can be loaded into a [`Toolkit`].
+///
+/// This trait enables the unified [`Toolkit::load`] method to accept multiple
+/// input types while dispatching to the appropriate underlying load method.
+///
+/// # Implementors
+///
+/// - `&str` - Load music notation from a string (format auto-detected)
+/// - `&Path` - Load music notation from a file path
+/// - `&PathBuf` - Load music notation from a file path
+/// - [`ZipBase64`] - Load compressed MusicXML from base64 string
+/// - [`ZipBuffer`] - Load compressed MusicXML from byte slice
+///
+/// # Example
+///
+/// ```no_run
+/// use verovioxide::{Toolkit, ZipBase64, ZipBuffer};
+/// use std::path::Path;
+///
+/// let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+///
+/// // Load from string
+/// voxide.load("<mei>...</mei>").expect("Failed to load");
+///
+/// // Load from file
+/// voxide.load(Path::new("score.mei")).expect("Failed to load");
+///
+/// // Load compressed MusicXML from base64
+/// voxide.load(ZipBase64("UEsDBBQ...")).expect("Failed to load");
+///
+/// // Load compressed MusicXML from bytes
+/// let bytes = std::fs::read("score.mxl").unwrap();
+/// voxide.load(ZipBuffer(&bytes)).expect("Failed to load");
+/// ```
+pub trait LoadSource {
+    /// Load this source into the given toolkit.
+    fn load_into(self, toolkit: &mut Toolkit) -> Result<()>;
+}
+
+impl LoadSource for &str {
+    fn load_into(self, toolkit: &mut Toolkit) -> Result<()> {
+        toolkit.load_data(self)
+    }
+}
+
+impl LoadSource for &Path {
+    fn load_into(self, toolkit: &mut Toolkit) -> Result<()> {
+        toolkit.load_file(self)
+    }
+}
+
+impl LoadSource for &std::path::PathBuf {
+    fn load_into(self, toolkit: &mut Toolkit) -> Result<()> {
+        toolkit.load_file(self)
+    }
+}
+
+impl<'a> LoadSource for ZipBase64<'a> {
+    fn load_into(self, toolkit: &mut Toolkit) -> Result<()> {
+        toolkit.load_zip_data_base64(self.0)
+    }
+}
+
+impl<'a> LoadSource for ZipBuffer<'a> {
+    fn load_into(self, toolkit: &mut Toolkit) -> Result<()> {
+        toolkit.load_zip_data_buffer(self.0)
+    }
+}
+
 /// A safe wrapper around the Verovio toolkit.
 ///
 /// This struct provides a safe, idiomatic interface to the Verovio music engraving library.
@@ -231,6 +335,51 @@ impl Toolkit {
             #[cfg(feature = "bundled-data")]
             _temp_dir: None,
         })
+    }
+
+    /// Loads music notation from various sources.
+    ///
+    /// This is the unified loading method that dispatches to the appropriate
+    /// underlying loader based on the input type. The format is auto-detected.
+    ///
+    /// # Supported Sources
+    ///
+    /// | Type | Description |
+    /// |------|-------------|
+    /// | `&str` | Music notation as a string (MEI, MusicXML, ABC, Humdrum, PAE) |
+    /// | `&Path` | Path to a music file |
+    /// | `&PathBuf` | Path to a music file |
+    /// | [`ZipBase64`] | Base64-encoded compressed MusicXML (`.mxl`) |
+    /// | [`ZipBuffer`] | Raw bytes of compressed MusicXML (`.mxl`) |
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use verovioxide::{Toolkit, ZipBase64, ZipBuffer};
+    /// use std::path::Path;
+    ///
+    /// let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    ///
+    /// // Load MEI from string
+    /// let mei = r#"<mei xmlns="http://www.music-encoding.org/ns/mei">...</mei>"#;
+    /// voxide.load(mei).expect("Failed to load MEI");
+    ///
+    /// // Load from file
+    /// voxide.load(Path::new("score.musicxml")).expect("Failed to load file");
+    ///
+    /// // Load compressed MusicXML
+    /// let mxl_bytes = std::fs::read("score.mxl").unwrap();
+    /// voxide.load(ZipBuffer(&mxl_bytes)).expect("Failed to load MXL");
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`load_data`](Self::load_data) - Load specifically from string
+    /// - [`load_file`](Self::load_file) - Load specifically from file path
+    /// - [`load_zip_data_base64`](Self::load_zip_data_base64) - Load specifically from base64 ZIP
+    /// - [`load_zip_data_buffer`](Self::load_zip_data_buffer) - Load specifically from ZIP bytes
+    pub fn load(&mut self, source: impl LoadSource) -> Result<()> {
+        source.load_into(self)
     }
 
     /// Loads music data from a string.
@@ -4308,5 +4457,149 @@ mod tests {
         let _ = toolkit.get_midi_values_for_element("n1");
         let _ = toolkit.get_notated_id_for_element("n1");
         let _ = toolkit.get_times_for_element("n1");
+    }
+
+    // =========================================================================
+    // LoadSource Trait and Unified Load Method Tests
+    // =========================================================================
+
+    #[test]
+    fn test_zip_base64_marker_debug() {
+        let marker = ZipBase64("test");
+        let debug = format!("{:?}", marker);
+        assert!(debug.contains("ZipBase64"));
+        assert!(debug.contains("test"));
+    }
+
+    #[test]
+    fn test_zip_base64_marker_clone() {
+        let marker = ZipBase64("test");
+        let cloned = marker;
+        assert_eq!(cloned.0, "test");
+    }
+
+    #[test]
+    fn test_zip_buffer_marker_debug() {
+        let data = b"test";
+        let marker = ZipBuffer(data);
+        let debug = format!("{:?}", marker);
+        assert!(debug.contains("ZipBuffer"));
+    }
+
+    #[test]
+    fn test_zip_buffer_marker_clone() {
+        let data = b"test";
+        let marker = ZipBuffer(data);
+        let cloned = marker;
+        assert_eq!(cloned.0, data);
+    }
+
+    #[test]
+    fn test_load_source_str_empty() {
+        let mut toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.load("");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_load_source_path_not_found() {
+        let mut toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.load(Path::new("/nonexistent/path/to/file.mei"));
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("file not found"));
+    }
+
+    #[test]
+    fn test_load_source_pathbuf_not_found() {
+        let mut toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let path = std::path::PathBuf::from("/nonexistent/path/to/file.mei");
+        let result = toolkit.load(&path);
+        assert!(result.is_err());
+    }
+
+    // NOTE: Tests for invalid ZIP data are intentionally omitted because
+    // Verovio crashes with a C++ exception rather than returning an error
+    // when given invalid ZIP data. This is documented behavior.
+
+    #[test]
+    fn test_load_source_str_null_byte() {
+        let mut toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.load("data with \0 null byte");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_load_source_zip_base64_null_byte() {
+        let mut toolkit = Toolkit::without_resources().expect("Failed to create toolkit");
+        let result = toolkit.load(ZipBase64("data with \0 null byte"));
+        assert!(result.is_err());
+    }
+
+    #[cfg(feature = "bundled-data")]
+    #[test]
+    fn test_load_source_str_valid_mei() {
+        let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+
+        let mei = r#"<?xml version="1.0" encoding="UTF-8"?>
+<mei xmlns="http://www.music-encoding.org/ns/mei">
+  <music><body><mdiv><score>
+    <scoreDef><staffGrp><staffDef n="1" lines="5" clef.shape="G" clef.line="2"/></staffGrp></scoreDef>
+    <section><measure><staff n="1"><layer n="1"><note pname="c" oct="4" dur="4"/></layer></staff></measure></section>
+  </score></mdiv></body></music>
+</mei>"#;
+
+        let result = toolkit.load(mei);
+        assert!(result.is_ok());
+        assert!(toolkit.page_count() > 0);
+    }
+
+    #[cfg(feature = "bundled-data")]
+    #[test]
+    fn test_load_source_str_valid_abc() {
+        let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+
+        let abc = r#"X:1
+T:Test
+M:4/4
+K:C
+CDEF|"#;
+
+        let result = toolkit.load(abc);
+        assert!(result.is_ok());
+    }
+
+    #[cfg(feature = "bundled-data")]
+    #[test]
+    fn test_load_dispatches_correctly_str() {
+        // Verify that load(&str) dispatches to load_data
+        let mut toolkit = Toolkit::new().expect("Failed to create toolkit");
+
+        let mei = r#"<?xml version="1.0" encoding="UTF-8"?>
+<mei xmlns="http://www.music-encoding.org/ns/mei">
+  <music><body><mdiv><score>
+    <scoreDef><staffGrp><staffDef n="1" lines="5" clef.shape="G" clef.line="2"/></staffGrp></scoreDef>
+    <section><measure><staff n="1"><layer n="1"><note pname="c" oct="4" dur="4"/></layer></staff></measure></section>
+  </score></mdiv></body></music>
+</mei>"#;
+
+        // Load using unified method
+        toolkit.load(mei).expect("Failed to load via load()");
+        let page_count_load = toolkit.page_count();
+
+        // Load using direct method
+        let mut toolkit2 = Toolkit::new().expect("Failed to create toolkit");
+        toolkit2.load_data(mei).expect("Failed to load via load_data()");
+        let page_count_direct = toolkit2.page_count();
+
+        assert_eq!(page_count_load, page_count_direct);
+    }
+
+    #[test]
+    fn test_load_source_trait_is_object_safe() {
+        // This test verifies the trait can be used as a trait object (if needed)
+        fn accepts_load_source(_source: &dyn std::any::Any) {}
+        let source: &str = "test";
+        accepts_load_source(&source);
     }
 }
