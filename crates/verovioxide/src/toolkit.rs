@@ -488,9 +488,7 @@ impl Toolkit {
         if success {
             Ok(())
         } else {
-            Err(Error::LoadError(
-                "failed to load ZIP data (base64)".into(),
-            ))
+            Err(Error::LoadError("failed to load ZIP data (base64)".into()))
         }
     }
 
@@ -632,8 +630,9 @@ impl Toolkit {
         let result_ptr =
             unsafe { verovioxide_sys::vrvToolkit_validatePAEFile(self.ptr, c_path.as_ptr()) };
 
-        self.ptr_to_string(result_ptr)
-            .ok_or_else(|| Error::RenderError(format!("failed to validate PAE file: {}", path.display())))
+        self.ptr_to_string(result_ptr).ok_or_else(|| {
+            Error::RenderError(format!("failed to validate PAE file: {}", path.display()))
+        })
     }
 
     // =========================================================================
@@ -674,8 +673,7 @@ impl Toolkit {
         let c_selection = CString::new(selection)?;
 
         // SAFETY: ptr is valid, c_selection is a valid null-terminated string
-        let success =
-            unsafe { verovioxide_sys::vrvToolkit_select(self.ptr, c_selection.as_ptr()) };
+        let success = unsafe { verovioxide_sys::vrvToolkit_select(self.ptr, c_selection.as_ptr()) };
 
         if success {
             Ok(())
@@ -1236,8 +1234,9 @@ impl Toolkit {
         let c_data = CString::new(data)?;
 
         // SAFETY: ptr is valid, c_data is a valid null-terminated string
-        let result_ptr =
-            unsafe { verovioxide_sys::vrvToolkit_convertHumdrumToHumdrum(self.ptr, c_data.as_ptr()) };
+        let result_ptr = unsafe {
+            verovioxide_sys::vrvToolkit_convertHumdrumToHumdrum(self.ptr, c_data.as_ptr())
+        };
 
         self.ptr_to_string(result_ptr)
             .ok_or_else(|| Error::RenderError("failed to convert Humdrum to Humdrum".into()))
@@ -2170,10 +2169,7 @@ impl Toolkit {
             unsafe { verovioxide_sys::vrvToolkit_getMIDIValuesForElement(self.ptr, c_id.as_ptr()) };
 
         self.ptr_to_string(result_ptr).ok_or_else(|| {
-            Error::RenderError(format!(
-                "failed to get MIDI values for element: {}",
-                xml_id
-            ))
+            Error::RenderError(format!("failed to get MIDI values for element: {}", xml_id))
         })
     }
 
@@ -4124,7 +4120,6 @@ mod tests {
         let result = toolkit.render_to_timemap_with_options(r#"{"includeMeasures": true}"#);
         assert!(result.is_ok());
     }
-
 
     #[cfg(feature = "bundled-data")]
     #[test]

@@ -964,7 +964,7 @@ mod tests {
 
     #[test]
     fn test_is_valid_toolkit() {
-        use crate::bindings::{is_valid_toolkit, NULL_TOOLKIT, ToolkitPtr};
+        use crate::bindings::{NULL_TOOLKIT, ToolkitPtr, is_valid_toolkit};
 
         // Null pointer should be invalid
         assert!(!is_valid_toolkit(NULL_TOOLKIT));
