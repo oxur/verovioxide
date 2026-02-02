@@ -57,21 +57,21 @@ If prebuilt binaries aren't available for your platform, it automatically falls 
 use verovioxide::{Toolkit, Options, Result};
 
 fn main() -> Result<()> {
-    // Create a toolkit with bundled resources
-    let mut toolkit = Toolkit::new()?;
+    // Create a Verovio toolkit with bundled resources
+    let mut voxide = Toolkit::new()?;
 
     // Load notation (format auto-detected)
-    toolkit.load_file(Path::new("score.musicxml"))?;
+    voxide.load_file(Path::new("score.musicxml"))?;
 
     // Configure rendering
     let options = Options::builder()
         .scale(100)
         .adjust_page_height(true)
         .build();
-    toolkit.set_options(&options)?;
+    voxide.set_options(&options)?;
 
     // Render to SVG
-    let svg = toolkit.render_to_svg(1)?;
+    let svg = voxide.render_to_svg(1)?;
     std::fs::write("score.svg", &svg)?;
 
     Ok(())
@@ -83,13 +83,13 @@ fn main() -> Result<()> {
 ### Single Page
 
 ```rust
-let svg = toolkit.render_to_svg(1)?;  // Page numbers are 1-based
+let svg = voxide.render_to_svg(1)?;  // Page numbers are 1-based
 ```
 
 ### All Pages
 
 ```rust
-let pages = toolkit.render_all_pages()?;
+let pages = voxide.render_all_pages()?;
 for (i, svg) in pages.iter().enumerate() {
     std::fs::write(format!("page-{}.svg", i + 1), svg)?;
 }
@@ -98,14 +98,14 @@ for (i, svg) in pages.iter().enumerate() {
 ### With XML Declaration
 
 ```rust
-let svg = toolkit.render_to_svg_with_declaration(1)?;
+let svg = voxide.render_to_svg_with_declaration(1)?;
 // Includes: <?xml version="1.0" encoding="UTF-8"?>
 ```
 
 ### Page Information
 
 ```rust
-let count = toolkit.page_count();
+let count = voxide.page_count();
 println!("Document has {} pages", count);
 ```
 
@@ -117,33 +117,33 @@ Verovioxide can convert between multiple music notation formats:
 
 ```rust
 // Load any supported format
-toolkit.load_file(Path::new("score.musicxml"))?;
+voxide.load_file(Path::new("score.musicxml"))?;
 
 // Export as MEI
-let mei = toolkit.get_mei()?;
+let mei = voxide.get_mei()?;
 std::fs::write("score.mei", &mei)?;
 
 // With options
-let mei = toolkit.get_mei_with_options(r#"{"removeIds": false}"#)?;
+let mei = voxide.get_mei_with_options(r#"{"removeIds": false}"#)?;
 ```
 
 ### Export to Humdrum
 
 ```rust
-let humdrum = toolkit.get_humdrum()?;
+let humdrum = voxide.get_humdrum()?;
 std::fs::write("score.krn", &humdrum)?;
 ```
 
 ### Export to Plaine & Easie (PAE)
 
 ```rust
-let pae = toolkit.render_to_pae()?;
+let pae = voxide.render_to_pae()?;
 ```
 
 ### Generate MIDI
 
 ```rust
-let midi_base64 = toolkit.render_to_midi()?;
+let midi_base64 = voxide.render_to_midi()?;
 
 // Decode and save
 use base64::{Engine, engine::general_purpose::STANDARD};
@@ -155,10 +155,10 @@ std::fs::write("score.mid", &midi_bytes)?;
 
 ```rust
 // Get timemap for audio synchronization
-let timemap = toolkit.render_to_timemap()?;  // JSON array
+let timemap = voxide.render_to_timemap()?;  // JSON array
 
 // Get expansion map for repeat handling
-let expansion_map = toolkit.render_to_expansion_map()?;
+let expansion_map = voxide.render_to_expansion_map()?;
 ```
 
 ## Querying Elements
@@ -167,28 +167,28 @@ let expansion_map = toolkit.render_to_expansion_map()?;
 
 ```rust
 // Get elements sounding at a specific time (milliseconds)
-let elements_json = toolkit.get_elements_at_time(5000)?;
+let elements_json = voxide.get_elements_at_time(5000)?;
 ```
 
 ### Get Time for Element
 
 ```rust
 // Get timing for a specific element
-let time_ms = toolkit.get_time_for_element("note-0000001")?;
+let time_ms = voxide.get_time_for_element("note-0000001")?;
 ```
 
 ### Find Page by Element
 
 ```rust
 // Find which page contains an element
-let page = toolkit.get_page_with_element("measure-0000001")?;
+let page = voxide.get_page_with_element("measure-0000001")?;
 ```
 
 ### Get Element Attributes
 
 ```rust
 // Get attributes of an element as JSON
-let attrs = toolkit.get_element_attr("note-0000001")?;
+let attrs = voxide.get_element_attr("note-0000001")?;
 ```
 
 ## Configuration
@@ -238,7 +238,7 @@ let options = Options::builder()
 
     .build();
 
-toolkit.set_options(&options)?;
+voxide.set_options(&options)?;
 ```
 
 ### Available Options
@@ -350,7 +350,7 @@ verovioxide = { version = "0.2", default-features = false }
 ```
 
 ```rust
-let toolkit = Toolkit::with_resource_path(Path::new("/path/to/verovio/data"))?;
+let voxide = Toolkit::with_resource_path(Path::new("/path/to/verovio/data"))?;
 ```
 
 ## Building from Source
@@ -457,7 +457,7 @@ Toolkit::enable_log(true);
 // Or capture to buffer
 Toolkit::enable_log_to_buffer(true);
 // ... operations ...
-let log = toolkit.get_log();
+let log = voxide.get_log();
 ```
 
 ## License
