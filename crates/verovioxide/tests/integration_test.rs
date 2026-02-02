@@ -592,3 +592,298 @@ fn test_readme_quick_start_pattern() {
 
     assert_valid_svg(&svg);
 }
+
+// =============================================================================
+// Unified Render API Tests
+// =============================================================================
+
+use verovioxide::{ExpansionMap, Humdrum, Mei, Midi, Pae, Svg, Timemap};
+
+/// Test the unified render() method with Svg::page().
+#[test]
+fn test_render_svg_page() {
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    let svg: String = voxide.render(Svg::page(1)).expect("Failed to render");
+    assert_valid_svg(&svg);
+}
+
+/// Test the unified render() method with Svg::page() and declaration.
+#[test]
+fn test_render_svg_page_with_declaration() {
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    let svg: String = voxide
+        .render(Svg::page(1).with_declaration())
+        .expect("Failed to render");
+    assert_valid_svg(&svg);
+    // Note: The declaration may or may not be present depending on Verovio's behavior
+}
+
+/// Test the unified render() method with Svg::all_pages().
+#[test]
+fn test_render_svg_all_pages() {
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    let pages: Vec<String> = voxide
+        .render(Svg::all_pages())
+        .expect("Failed to render");
+    assert!(!pages.is_empty());
+    for svg in &pages {
+        assert_valid_svg(svg);
+    }
+}
+
+/// Test the unified render() method with Svg::pages() for a range.
+#[test]
+fn test_render_svg_pages_range() {
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    // Get page count first
+    let count = voxide.page_count();
+    if count >= 1 {
+        let pages: Vec<String> = voxide
+            .render(Svg::pages(1, count))
+            .expect("Failed to render");
+        assert_eq!(pages.len(), count as usize);
+        for svg in &pages {
+            assert_valid_svg(svg);
+        }
+    }
+}
+
+/// Test the unified render() method with Midi.
+#[test]
+fn test_render_midi() {
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    let midi: String = voxide.render(Midi).expect("Failed to render MIDI");
+    // MIDI is base64-encoded, should be non-empty
+    assert!(!midi.is_empty());
+}
+
+/// Test the unified render() method with Pae.
+#[test]
+fn test_render_pae() {
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    let pae: String = voxide.render(Pae).expect("Failed to render PAE");
+    assert!(!pae.is_empty());
+}
+
+/// Test the unified render() method with Timemap.
+#[test]
+fn test_render_timemap() {
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    let timemap: String = voxide.render(Timemap).expect("Failed to render timemap");
+    // Timemap is JSON, should start with [ or {
+    let trimmed = timemap.trim();
+    assert!(
+        trimmed.starts_with('[') || trimmed.starts_with('{'),
+        "Timemap should be JSON"
+    );
+}
+
+/// Test the unified render() method with Timemap options.
+#[test]
+fn test_render_timemap_with_options() {
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    let timemap: String = voxide
+        .render(Timemap::with_options().include_measures(true))
+        .expect("Failed to render timemap");
+    let trimmed = timemap.trim();
+    assert!(trimmed.starts_with('[') || trimmed.starts_with('{'));
+}
+
+/// Test the unified render() method with ExpansionMap.
+#[test]
+fn test_render_expansion_map() {
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    let expansion: String = voxide
+        .render(ExpansionMap)
+        .expect("Failed to render expansion map");
+    // Expansion map is JSON
+    let trimmed = expansion.trim();
+    assert!(
+        trimmed.starts_with('[') || trimmed.starts_with('{'),
+        "Expansion map should be JSON"
+    );
+}
+
+/// Test the unified render() method with Mei.
+#[test]
+fn test_render_unified_mei() {
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MUSICXML).expect("Failed to load MusicXML");
+
+    let mei: String = voxide.render(Mei).expect("Failed to render MEI");
+    assert!(mei.contains("<mei"));
+    assert!(mei.contains("</mei>"));
+}
+
+/// Test the unified render() method with Mei options.
+#[test]
+fn test_render_mei_with_options() {
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MUSICXML).expect("Failed to load MusicXML");
+
+    let mei: String = voxide
+        .render(Mei::with_options().remove_ids(false))
+        .expect("Failed to render MEI");
+    assert!(mei.contains("<mei"));
+}
+
+/// Test the unified render() method with Humdrum.
+#[test]
+fn test_render_humdrum() {
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    let humdrum: String = voxide.render(Humdrum).expect("Failed to render Humdrum");
+    // Humdrum format typically has kern data
+    assert!(!humdrum.is_empty());
+}
+
+/// Test render_to() with format inference from .svg extension.
+#[test]
+fn test_render_to_svg_file() {
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+    let output_path = temp_dir.path().join("output.svg");
+
+    voxide
+        .render_to(&output_path)
+        .expect("Failed to render to file");
+
+    let content = std::fs::read_to_string(&output_path).expect("Failed to read file");
+    assert_valid_svg(&content);
+}
+
+/// Test render_to() with format inference from .mid extension.
+#[test]
+fn test_render_to_midi_file() {
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+    let output_path = temp_dir.path().join("output.mid");
+
+    voxide
+        .render_to(&output_path)
+        .expect("Failed to render to file");
+
+    // MIDI file should exist and have content
+    let metadata = std::fs::metadata(&output_path).expect("Failed to get metadata");
+    assert!(metadata.len() > 0);
+}
+
+/// Test render_to() with format inference from .mei extension.
+#[test]
+fn test_render_to_mei_file() {
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MUSICXML).expect("Failed to load MusicXML");
+
+    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+    let output_path = temp_dir.path().join("output.mei");
+
+    voxide
+        .render_to(&output_path)
+        .expect("Failed to render to file");
+
+    let content = std::fs::read_to_string(&output_path).expect("Failed to read file");
+    assert!(content.contains("<mei"));
+}
+
+/// Test render_to_as() with explicit Svg::page().
+#[test]
+fn test_render_to_as_svg_page() {
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+    let output_path = temp_dir.path().join("output.svg");
+
+    voxide
+        .render_to_as(&output_path, Svg::page(1))
+        .expect("Failed to render to file");
+
+    let content = std::fs::read_to_string(&output_path).expect("Failed to read file");
+    assert_valid_svg(&content);
+}
+
+/// Test render_to_as() with Svg::all_pages() creates directory.
+#[test]
+fn test_render_to_as_svg_all_pages_creates_directory() {
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+    let output_path = temp_dir.path().join("output.svg");
+
+    voxide
+        .render_to_as(&output_path, Svg::all_pages())
+        .expect("Failed to render to file");
+
+    // Should create output/ directory (output.svg minus extension)
+    let output_dir = temp_dir.path().join("output");
+    assert!(output_dir.exists(), "Output directory should exist");
+    assert!(output_dir.is_dir(), "Output should be a directory");
+
+    // Should have page-001.svg (at minimum)
+    let page1 = output_dir.join("page-001.svg");
+    assert!(page1.exists(), "page-001.svg should exist");
+
+    let content = std::fs::read_to_string(&page1).expect("Failed to read page file");
+    assert_valid_svg(&content);
+}
+
+/// Test render_to_as() with Timemap for .json files.
+#[test]
+fn test_render_to_as_timemap_json() {
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+    let output_path = temp_dir.path().join("output.json");
+
+    voxide
+        .render_to_as(&output_path, Timemap)
+        .expect("Failed to render to file");
+
+    let content = std::fs::read_to_string(&output_path).expect("Failed to read file");
+    let trimmed = content.trim();
+    assert!(trimmed.starts_with('[') || trimmed.starts_with('{'));
+}
+
+/// Test that render_to() fails for ambiguous .json extension.
+#[test]
+fn test_render_to_json_fails_ambiguous() {
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+    let output_path = temp_dir.path().join("output.json");
+
+    let result = voxide.render_to(&output_path);
+    assert!(result.is_err(), "Should fail for ambiguous .json extension");
+    let err = result.unwrap_err().to_string();
+    assert!(
+        err.contains("ambiguous"),
+        "Error should mention ambiguity: {}",
+        err
+    );
+}

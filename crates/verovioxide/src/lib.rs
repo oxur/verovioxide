@@ -258,11 +258,16 @@
 
 mod error;
 mod options;
+mod render;
 mod toolkit;
 
 pub use error::{Error, Result};
 pub use options::{
     BreakMode, CondenseMode, FooterMode, HeaderMode, Options, OptionsBuilder, TextFont,
+};
+pub use render::{
+    ExpansionMap, Humdrum, Mei, MeiOptionsBuilder, Midi, Pae, RenderOutput, RenderSpec, Svg,
+    SvgAllPages, SvgPage, SvgPages, Timemap, TimemapOptionsBuilder,
 };
 pub use toolkit::{LoadSource, Toolkit, ZipBase64, ZipBuffer};
 

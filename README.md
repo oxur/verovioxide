@@ -45,6 +45,7 @@ verovioxide-sys = { version = "0.2", features = ["prebuilt"] }
 ```
 
 Prebuilt binaries are available for:
+
 - macOS (x86_64, aarch64)
 - Linux (x86_64, aarch64)
 - Windows (x86_64 MSVC)
@@ -54,7 +55,7 @@ If prebuilt binaries aren't available for your platform, it automatically falls 
 ## Quick Start
 
 ```rust
-use verovioxide::{Toolkit, Options, Result};
+use verovioxide::{Toolkit, Options, Result, Svg};
 use std::path::Path;
 
 fn main() -> Result<()> {
@@ -70,37 +71,73 @@ fn main() -> Result<()> {
         .adjust_page_height(true)
         .build();
     voxide.set_options(&options)?;
-
-    // Render to SVG
-    let svg = voxide.render_to_svg(1)?;
-    std::fs::write("score.svg", &svg)?;
-
+    voxide.render_to("score.svg")?;
     Ok(())
 }
 ```
 
 ## Rendering
 
-### Single Page
+Verovioxide provides a unified render API with builder pattern for type-safe, consistent output.
+
+### In-Memory Rendering
+
+Use `render()` with format builders:
 
 ```rust
-let svg = voxide.render_to_svg(1)?;  // Page numbers are 1-based
+use verovioxide::{Svg, Midi, Mei, Timemap, Humdrum, Pae, ExpansionMap};
+
+// SVG rendering
+let svg: String = voxide.render(Svg::page(1))?;           // Single page
+let svg: String = voxide.render(Svg::page(1).with_declaration())?;
+let pages: Vec<String> = voxide.render(Svg::all_pages())?; // All pages
+let pages: Vec<String> = voxide.render(Svg::pages(2, 5))?; // Page range
+
+// Other formats
+let midi: String = voxide.render(Midi)?;          // Base64-encoded MIDI
+let mei: String = voxide.render(Mei)?;            // MEI XML
+let humdrum: String = voxide.render(Humdrum)?;    // Humdrum/Kern
+let pae: String = voxide.render(Pae)?;            // Plaine & Easie
+let timemap: String = voxide.render(Timemap)?;    // JSON timing data
+let expansion: String = voxide.render(ExpansionMap)?;
 ```
 
-### All Pages
+### File Rendering
+
+Use `render_to()` for simple cases (format inferred from extension):
 
 ```rust
-let pages = voxide.render_all_pages()?;
-for (i, svg) in pages.iter().enumerate() {
-    std::fs::write(format!("page-{}.svg", i + 1), svg)?;
-}
+voxide.render_to("output.svg")?;    // SVG page 1
+voxide.render_to("output.mid")?;    // MIDI
+voxide.render_to("output.mei")?;    // MEI
 ```
 
-### With XML Declaration
+Use `render_to_as()` for explicit control:
 
 ```rust
-let svg = voxide.render_to_svg_with_declaration(1)?;
-// Includes: <?xml version="1.0" encoding="UTF-8"?>
+voxide.render_to_as("output.svg", Svg::page(3))?;        // Specific page
+voxide.render_to_as("output.svg", Svg::all_pages())?;    // Creates output/ directory
+voxide.render_to_as("output.json", Timemap)?;            // Disambiguate .json
+```
+
+### Format-Specific Options
+
+Timemap and MEI support typed options:
+
+```rust
+// Timemap with options
+let timemap = voxide.render(
+    Timemap::with_options()
+        .include_measures(true)
+        .include_rests(false)
+)?;
+
+// MEI with options
+let mei = voxide.render(
+    Mei::with_options()
+        .remove_ids(true)
+        .page_based(false)
+)?;
 ```
 
 ### Page Information
@@ -110,56 +147,17 @@ let count = voxide.page_count();
 println!("Document has {} pages", count);
 ```
 
-## Format Conversion
+### Legacy Methods
 
-Verovioxide can convert between multiple music notation formats:
-
-### Export to MEI
+The original render methods remain available for backwards compatibility:
 
 ```rust
-// Load any supported format
-voxide.load(Path::new("score.musicxml"))?;
-
-// Export as MEI
+let svg = voxide.render_to_svg(1)?;
+let pages = voxide.render_all_pages()?;
 let mei = voxide.get_mei()?;
-std::fs::write("score.mei", &mei)?;
-
-// With options
-let mei = voxide.get_mei_with_options(r#"{"removeIds": false}"#)?;
-```
-
-### Export to Humdrum
-
-```rust
 let humdrum = voxide.get_humdrum()?;
-std::fs::write("score.krn", &humdrum)?;
-```
-
-### Export to Plaine & Easie (PAE)
-
-```rust
-let pae = voxide.render_to_pae()?;
-```
-
-### Generate MIDI
-
-```rust
-let midi_base64 = voxide.render_to_midi()?;
-
-// Decode and save
-use base64::{Engine, engine::general_purpose::STANDARD};
-let midi_bytes = STANDARD.decode(&midi_base64)?;
-std::fs::write("score.mid", &midi_bytes)?;
-```
-
-### Timing Data
-
-```rust
-// Get timemap for audio synchronization
-let timemap = voxide.render_to_timemap()?;  // JSON array
-
-// Get expansion map for repeat handling
-let expansion_map = voxide.render_to_expansion_map()?;
+let midi = voxide.render_to_midi()?;
+let timemap = voxide.render_to_timemap()?;
 ```
 
 ## Querying Elements
@@ -298,15 +296,15 @@ Format detection is automatic based on file content.
 
 ## Supported Output Formats
 
-| Format | Method | Description |
-|--------|--------|-------------|
-| SVG | `render_to_svg()` | Scalable vector graphics for display |
-| MEI | `get_mei()` | Music Encoding Initiative XML |
-| Humdrum | `get_humdrum()` | Humdrum/Kern format |
-| PAE | `render_to_pae()` | Plaine & Easie Code |
-| MIDI | `render_to_midi()` | Base64-encoded MIDI for playback |
-| Timemap | `render_to_timemap()` | JSON timing data for synchronization |
-| Expansion Map | `render_to_expansion_map()` | JSON expansion/repeat data |
+| Format | Unified API | Description |
+|--------|-------------|-------------|
+| SVG | `render(Svg::page(1))` | Scalable vector graphics for display |
+| MEI | `render(Mei)` | Music Encoding Initiative XML |
+| Humdrum | `render(Humdrum)` | Humdrum/Kern format |
+| PAE | `render(Pae)` | Plaine & Easie Code |
+| MIDI | `render(Midi)` | Base64-encoded MIDI for playback |
+| Timemap | `render(Timemap)` | JSON timing data for synchronization |
+| Expansion Map | `render(ExpansionMap)` | JSON expansion/repeat data |
 
 ## Feature Flags
 

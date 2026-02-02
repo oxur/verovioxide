@@ -904,6 +904,181 @@ impl Toolkit {
         self.ptr_to_string(usage_ptr).unwrap_or_default()
     }
 
+    // =========================================================================
+    // Unified Render API
+    // =========================================================================
+
+    /// Renders to a format-specific output type using builder pattern.
+    ///
+    /// This is the unified rendering API that provides type-safe, consistent
+    /// access to all output formats. Each format has its own builder type
+    /// that specifies options and determines the output type.
+    ///
+    /// # Format Types
+    ///
+    /// | Format | Builder | Output Type |
+    /// |--------|---------|-------------|
+    /// | SVG (single page) | [`Svg::page(n)`] | `String` |
+    /// | SVG (page range) | [`Svg::pages(start, end)`] | `Vec<String>` |
+    /// | SVG (all pages) | [`Svg::all_pages()`] | `Vec<String>` |
+    /// | MIDI | [`Midi`] | `String` (base64) |
+    /// | PAE | [`Pae`] | `String` |
+    /// | Timemap | [`Timemap`] | `String` (JSON) |
+    /// | ExpansionMap | [`ExpansionMap`] | `String` (JSON) |
+    /// | MEI | [`Mei`] | `String` |
+    /// | Humdrum | [`Humdrum`] | `String` |
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use verovioxide::{Toolkit, Svg, Midi, Timemap, Mei};
+    ///
+    /// let mut voxide = Toolkit::new().unwrap();
+    /// voxide.load("score.mei").unwrap();
+    ///
+    /// // SVG rendering
+    /// let svg: String = voxide.render(Svg::page(1)).unwrap();
+    /// let svg: String = voxide.render(Svg::page(3).with_declaration()).unwrap();
+    /// let pages: Vec<String> = voxide.render(Svg::all_pages()).unwrap();
+    /// let pages: Vec<String> = voxide.render(Svg::pages(2, 5)).unwrap();
+    ///
+    /// // Other formats
+    /// let midi: String = voxide.render(Midi).unwrap();
+    /// let timemap: String = voxide.render(Timemap).unwrap();
+    /// let timemap: String = voxide.render(
+    ///     Timemap::with_options().include_measures(true)
+    /// ).unwrap();
+    /// let mei: String = voxide.render(Mei).unwrap();
+    /// let mei: String = voxide.render(
+    ///     Mei::with_options().remove_ids(true)
+    /// ).unwrap();
+    /// ```
+    ///
+    /// # See also
+    ///
+    /// - [`render_to`](Self::render_to) - Render to file with format inference
+    /// - [`render_to_as`](Self::render_to_as) - Render to file with explicit format
+    pub fn render<R: crate::render::RenderOutput>(&self, format: R) -> Result<R::Output> {
+        format.render(self)
+    }
+
+    /// Renders to a file with format inferred from the file extension.
+    ///
+    /// This is a convenience method that automatically determines the output
+    /// format based on the file extension. For formats that require additional
+    /// options or for ambiguous extensions, use [`render_to_as`](Self::render_to_as).
+    ///
+    /// # Supported Extensions
+    ///
+    /// | Extension | Format | Notes |
+    /// |-----------|--------|-------|
+    /// | `.svg` | SVG | Renders page 1 |
+    /// | `.mid`, `.midi` | MIDI | Base64-decoded and written as binary |
+    /// | `.pae` | PAE | |
+    /// | `.mei` | MEI | |
+    /// | `.krn`, `.hmd` | Humdrum | |
+    /// | `.json` | Error | Ambiguous: use `render_to_as` with `Timemap` or `ExpansionMap` |
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use verovioxide::Toolkit;
+    ///
+    /// let mut voxide = Toolkit::new().unwrap();
+    /// voxide.load("score.mei").unwrap();
+    ///
+    /// // Format inferred from extension
+    /// voxide.render_to("output.svg").unwrap();    // SVG page 1
+    /// voxide.render_to("output.mid").unwrap();    // MIDI
+    /// voxide.render_to("output.mei").unwrap();    // MEI
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The file extension is not recognized
+    /// - The extension is ambiguous (`.json`)
+    /// - The file cannot be written
+    /// - Rendering fails
+    ///
+    /// # See also
+    ///
+    /// - [`render`](Self::render) - In-memory rendering
+    /// - [`render_to_as`](Self::render_to_as) - File rendering with explicit format
+    pub fn render_to(&self, path: impl AsRef<std::path::Path>) -> Result<()> {
+        crate::render::infer_format_and_render(self, path.as_ref())
+    }
+
+    /// Renders to a file with explicit format specification.
+    ///
+    /// Use this method when you need to:
+    /// - Specify a non-default page number for SVG
+    /// - Render multiple pages to a directory
+    /// - Disambiguate `.json` files (Timemap vs ExpansionMap)
+    /// - Use format-specific options
+    ///
+    /// # Multi-Page Output
+    ///
+    /// When using `Svg::all_pages()` or `Svg::pages(start, end)`, this method
+    /// creates a directory with the same name as the file (minus extension)
+    /// and writes individual page files as `page-001.svg`, `page-002.svg`, etc.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use verovioxide::{Toolkit, Svg, Timemap, Mei};
+    ///
+    /// let mut voxide = Toolkit::new().unwrap();
+    /// voxide.load("score.mei").unwrap();
+    ///
+    /// // Specific page
+    /// voxide.render_to_as("output.svg", Svg::page(3)).unwrap();
+    ///
+    /// // All pages (creates output/ directory with page-001.svg, page-002.svg, ...)
+    /// voxide.render_to_as("output.svg", Svg::all_pages()).unwrap();
+    ///
+    /// // Page range
+    /// voxide.render_to_as("output.svg", Svg::pages(2, 5)).unwrap();
+    ///
+    /// // Disambiguate JSON formats
+    /// voxide.render_to_as("output.json", Timemap).unwrap();
+    ///
+    /// // With options
+    /// voxide.render_to_as("output.json",
+    ///     Timemap::with_options().include_measures(true)
+    /// ).unwrap();
+    /// voxide.render_to_as("output.mei",
+    ///     Mei::with_options().remove_ids(true)
+    /// ).unwrap();
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The file or directory cannot be created
+    /// - Rendering fails
+    ///
+    /// # See also
+    ///
+    /// - [`render`](Self::render) - In-memory rendering
+    /// - [`render_to`](Self::render_to) - File rendering with format inference
+    pub fn render_to_as<F: crate::render::RenderSpec>(
+        &self,
+        path: impl AsRef<std::path::Path>,
+        format: F,
+    ) -> Result<()> {
+        format.render_to_file(self, path.as_ref())
+    }
+
+    // =========================================================================
+    // Legacy Rendering Methods
+    // =========================================================================
+    //
+    // The methods below are the original rendering API. They remain available
+    // for backwards compatibility and for cases where you need direct access
+    // to specific functionality. For new code, consider using the unified
+    // render(), render_to(), and render_to_as() methods above.
+
     /// Renders a page to SVG.
     ///
     /// Page numbers are 1-based. Use [`page_count()`](Self::page_count) to get the
