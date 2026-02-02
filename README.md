@@ -16,7 +16,7 @@
 - **Bundled fonts**: Leipzig, Bravura, Gootville, Leland, and Petaluma (SMuFL-compliant)
 - **Type-safe API**: Builder pattern for options with serde serialization
 - **Zero runtime dependencies**: Verovio statically linked
-- **Complete API coverage**: 100% of the Verovio C API wrapped in safe Rust
+- **Complete API coverage**: 100% of the Verovio C++ API wrapped in safe Rust
 - **Production ready**: Comprehensive error handling and 95%+ test coverage
 
 ## Installation
