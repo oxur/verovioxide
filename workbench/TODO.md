@@ -2,6 +2,8 @@
 
 ## Active
 
+- [ ] Add support for rendering to PNG
+
 ## Backlog
 
 ## Completed
