@@ -554,6 +554,451 @@ impl RenderSpec for MeiOptionsBuilder {
 }
 
 // =============================================================================
+// PNG Format Types (feature-gated)
+// =============================================================================
+
+/// PNG format builder.
+///
+/// Use the static methods to create page-specific render specifications.
+/// Returns raw PNG bytes (`Vec<u8>`) suitable for use with image processing
+/// libraries like `image` or terminal display with `viuer`.
+///
+/// *Added in 0.3.0.*
+///
+/// # Example
+///
+/// ```no_run
+/// use verovioxide::{Toolkit, Png};
+///
+/// let mut voxide = Toolkit::new().unwrap();
+/// voxide.load("score.mei").unwrap();
+///
+/// // Render single page to PNG bytes
+/// let png_bytes: Vec<u8> = voxide.render(Png::page(1)).unwrap();
+///
+/// // Render with options
+/// let png_bytes: Vec<u8> = voxide.render(
+///     Png::page(1).width(800).white_background()
+/// ).unwrap();
+///
+/// // Render all pages
+/// let all_pngs: Vec<Vec<u8>> = voxide.render(Png::all_pages()).unwrap();
+/// ```
+#[cfg(feature = "png")]
+#[cfg_attr(docsrs, doc(cfg(feature = "png")))]
+pub struct Png;
+
+#[cfg(feature = "png")]
+impl Png {
+    /// Render a single page to PNG.
+    ///
+    /// Page numbers are 1-indexed.
+    ///
+    /// *Added in 0.3.0.*
+    pub fn page(n: u32) -> PngPage {
+        PngPage {
+            page: n,
+            options: PngOptions::default(),
+        }
+    }
+
+    /// Render a range of pages to PNG.
+    ///
+    /// Page numbers are 1-indexed and inclusive.
+    ///
+    /// *Added in 0.3.0.*
+    pub fn pages(start: u32, end: u32) -> PngPages {
+        PngPages {
+            start,
+            end,
+            options: PngOptions::default(),
+        }
+    }
+
+    /// Render all pages to PNG.
+    ///
+    /// *Added in 0.3.0.*
+    pub fn all_pages() -> PngAllPages {
+        PngAllPages {
+            options: PngOptions::default(),
+        }
+    }
+}
+
+/// PNG rendering options.
+///
+/// Controls the output dimensions and background color for PNG rendering.
+///
+/// *Added in 0.3.0.*
+#[cfg(feature = "png")]
+#[cfg_attr(docsrs, doc(cfg(feature = "png")))]
+#[derive(Debug, Clone, Default)]
+pub struct PngOptions {
+    /// Target width in pixels. Scales proportionally if height is not set.
+    pub(crate) width: Option<u32>,
+    /// Target height in pixels. Scales proportionally if width is not set.
+    pub(crate) height: Option<u32>,
+    /// Zoom factor (1.0 = original size, 2.0 = double size).
+    pub(crate) scale: Option<f32>,
+    /// Background color. None = transparent (default).
+    pub(crate) background: Option<tiny_skia::Color>,
+}
+
+/// Single PNG page render specification.
+///
+/// *Added in 0.3.0.*
+#[cfg(feature = "png")]
+#[cfg_attr(docsrs, doc(cfg(feature = "png")))]
+#[derive(Debug, Clone)]
+pub struct PngPage {
+    page: u32,
+    options: PngOptions,
+}
+
+#[cfg(feature = "png")]
+impl PngPage {
+    /// Set target width in pixels (scales proportionally).
+    ///
+    /// *Added in 0.3.0.*
+    pub fn width(mut self, w: u32) -> Self {
+        self.options.width = Some(w);
+        self
+    }
+
+    /// Set target height in pixels (scales proportionally).
+    ///
+    /// *Added in 0.3.0.*
+    pub fn height(mut self, h: u32) -> Self {
+        self.options.height = Some(h);
+        self
+    }
+
+    /// Set zoom factor (1.0 = original size).
+    ///
+    /// *Added in 0.3.0.*
+    pub fn scale(mut self, s: f32) -> Self {
+        self.options.scale = Some(s);
+        self
+    }
+
+    /// Set background color with RGBA values.
+    ///
+    /// *Added in 0.3.0.*
+    pub fn background(mut self, r: u8, g: u8, b: u8, a: u8) -> Self {
+        self.options.background = Some(tiny_skia::Color::from_rgba8(r, g, b, a));
+        self
+    }
+
+    /// Set white opaque background.
+    ///
+    /// *Added in 0.3.0.*
+    pub fn white_background(mut self) -> Self {
+        self.options.background = Some(tiny_skia::Color::WHITE);
+        self
+    }
+
+    /// Get the page number.
+    pub fn page(&self) -> u32 {
+        self.page
+    }
+}
+
+#[cfg(feature = "png")]
+impl RenderOutput for PngPage {
+    type Output = Vec<u8>;
+
+    fn render(self, toolkit: &Toolkit) -> Result<Self::Output> {
+        let svg = toolkit.render_to_svg(self.page)?;
+        svg_to_png(&svg, &self.options)
+    }
+}
+
+#[cfg(feature = "png")]
+impl RenderSpec for PngPage {
+    fn render_to_file(self, toolkit: &Toolkit, path: &Path) -> Result<()> {
+        let png_bytes = RenderOutput::render(self, toolkit)?;
+        fs::write(path, &png_bytes).map_err(Error::IoError)?;
+        Ok(())
+    }
+}
+
+/// PNG page range render specification.
+///
+/// *Added in 0.3.0.*
+#[cfg(feature = "png")]
+#[cfg_attr(docsrs, doc(cfg(feature = "png")))]
+#[derive(Debug, Clone)]
+pub struct PngPages {
+    start: u32,
+    end: u32,
+    options: PngOptions,
+}
+
+#[cfg(feature = "png")]
+impl PngPages {
+    /// Set target width in pixels for all pages.
+    ///
+    /// *Added in 0.3.0.*
+    pub fn width(mut self, w: u32) -> Self {
+        self.options.width = Some(w);
+        self
+    }
+
+    /// Set target height in pixels for all pages.
+    ///
+    /// *Added in 0.3.0.*
+    pub fn height(mut self, h: u32) -> Self {
+        self.options.height = Some(h);
+        self
+    }
+
+    /// Set zoom factor for all pages.
+    ///
+    /// *Added in 0.3.0.*
+    pub fn scale(mut self, s: f32) -> Self {
+        self.options.scale = Some(s);
+        self
+    }
+
+    /// Set background color for all pages.
+    ///
+    /// *Added in 0.3.0.*
+    pub fn background(mut self, r: u8, g: u8, b: u8, a: u8) -> Self {
+        self.options.background = Some(tiny_skia::Color::from_rgba8(r, g, b, a));
+        self
+    }
+
+    /// Set white opaque background for all pages.
+    ///
+    /// *Added in 0.3.0.*
+    pub fn white_background(mut self) -> Self {
+        self.options.background = Some(tiny_skia::Color::WHITE);
+        self
+    }
+}
+
+#[cfg(feature = "png")]
+impl RenderOutput for PngPages {
+    type Output = Vec<Vec<u8>>;
+
+    fn render(self, toolkit: &Toolkit) -> Result<Self::Output> {
+        let mut pages = Vec::with_capacity((self.end - self.start + 1) as usize);
+        for page in self.start..=self.end {
+            let svg = toolkit.render_to_svg(page)?;
+            let png = svg_to_png(&svg, &self.options)?;
+            pages.push(png);
+        }
+        Ok(pages)
+    }
+}
+
+#[cfg(feature = "png")]
+impl RenderSpec for PngPages {
+    fn render_to_file(self, toolkit: &Toolkit, path: &Path) -> Result<()> {
+        // Create directory named after the file (without extension)
+        let dir = path.with_extension("");
+        fs::create_dir_all(&dir).map_err(Error::IoError)?;
+
+        for page in self.start..=self.end {
+            let svg = toolkit.render_to_svg(page)?;
+            let png = svg_to_png(&svg, &self.options)?;
+            let page_path = dir.join(format!("page-{:03}.png", page));
+            fs::write(&page_path, &png).map_err(Error::IoError)?;
+        }
+        Ok(())
+    }
+}
+
+/// Render all PNG pages specification.
+///
+/// *Added in 0.3.0.*
+#[cfg(feature = "png")]
+#[cfg_attr(docsrs, doc(cfg(feature = "png")))]
+#[derive(Debug, Clone)]
+pub struct PngAllPages {
+    options: PngOptions,
+}
+
+#[cfg(feature = "png")]
+impl PngAllPages {
+    /// Set target width in pixels for all pages.
+    ///
+    /// *Added in 0.3.0.*
+    pub fn width(mut self, w: u32) -> Self {
+        self.options.width = Some(w);
+        self
+    }
+
+    /// Set target height in pixels for all pages.
+    ///
+    /// *Added in 0.3.0.*
+    pub fn height(mut self, h: u32) -> Self {
+        self.options.height = Some(h);
+        self
+    }
+
+    /// Set zoom factor for all pages.
+    ///
+    /// *Added in 0.3.0.*
+    pub fn scale(mut self, s: f32) -> Self {
+        self.options.scale = Some(s);
+        self
+    }
+
+    /// Set background color for all pages.
+    ///
+    /// *Added in 0.3.0.*
+    pub fn background(mut self, r: u8, g: u8, b: u8, a: u8) -> Self {
+        self.options.background = Some(tiny_skia::Color::from_rgba8(r, g, b, a));
+        self
+    }
+
+    /// Set white opaque background for all pages.
+    ///
+    /// *Added in 0.3.0.*
+    pub fn white_background(mut self) -> Self {
+        self.options.background = Some(tiny_skia::Color::WHITE);
+        self
+    }
+}
+
+#[cfg(feature = "png")]
+impl RenderOutput for PngAllPages {
+    type Output = Vec<Vec<u8>>;
+
+    fn render(self, toolkit: &Toolkit) -> Result<Self::Output> {
+        let count = toolkit.page_count();
+        if count == 0 {
+            return Err(Error::RenderError("no data loaded".into()));
+        }
+
+        let mut pages = Vec::with_capacity(count as usize);
+        for page in 1..=count {
+            let svg = toolkit.render_to_svg(page)?;
+            let png = svg_to_png(&svg, &self.options)?;
+            pages.push(png);
+        }
+        Ok(pages)
+    }
+}
+
+#[cfg(feature = "png")]
+impl RenderSpec for PngAllPages {
+    fn render_to_file(self, toolkit: &Toolkit, path: &Path) -> Result<()> {
+        let count = toolkit.page_count();
+        if count == 0 {
+            return Err(Error::RenderError("no data loaded".into()));
+        }
+
+        // Create directory named after the file (without extension)
+        let dir = path.with_extension("");
+        fs::create_dir_all(&dir).map_err(Error::IoError)?;
+
+        for page in 1..=count {
+            let svg = toolkit.render_to_svg(page)?;
+            let png = svg_to_png(&svg, &self.options)?;
+            let page_path = dir.join(format!("page-{:03}.png", page));
+            fs::write(&page_path, &png).map_err(Error::IoError)?;
+        }
+        Ok(())
+    }
+}
+
+// =============================================================================
+// PNG Helper Functions
+// =============================================================================
+
+/// Convert SVG string to PNG bytes with the given options.
+#[cfg(feature = "png")]
+fn svg_to_png(svg: &str, options: &PngOptions) -> Result<Vec<u8>> {
+    // Parse SVG using usvg
+    let tree = usvg::Tree::from_str(svg, &usvg::Options::default())
+        .map_err(|e| Error::RenderError(format!("failed to parse SVG for PNG conversion: {}", e)))?;
+
+    // Get original SVG dimensions
+    let svg_size = tree.size();
+    let original_width = svg_size.width();
+    let original_height = svg_size.height();
+
+    // Calculate target dimensions based on options
+    let (target_width, target_height, scale_x, scale_y) =
+        calculate_png_dimensions(original_width, original_height, options);
+
+    // Create pixmap with target dimensions
+    let mut pixmap = tiny_skia::Pixmap::new(target_width, target_height).ok_or_else(|| {
+        Error::RenderError(format!(
+            "failed to create pixmap with dimensions {}x{}",
+            target_width, target_height
+        ))
+    })?;
+
+    // Apply background color if specified (otherwise transparent)
+    if let Some(bg) = options.background {
+        pixmap.fill(bg);
+    }
+
+    // Create transform for scaling
+    let transform = tiny_skia::Transform::from_scale(scale_x, scale_y);
+
+    // Render SVG to pixmap
+    resvg::render(&tree, transform, &mut pixmap.as_mut());
+
+    // Encode to PNG
+    pixmap
+        .encode_png()
+        .map_err(|e| Error::RenderError(format!("failed to encode PNG: {}", e)))
+}
+
+/// Calculate target PNG dimensions based on options.
+///
+/// Returns (width, height, scale_x, scale_y).
+#[cfg(feature = "png")]
+fn calculate_png_dimensions(
+    original_width: f32,
+    original_height: f32,
+    options: &PngOptions,
+) -> (u32, u32, f32, f32) {
+    // Priority: explicit scale > width/height constraints > original size
+
+    if let Some(scale) = options.scale {
+        // Scale factor takes priority
+        let w = (original_width * scale).ceil() as u32;
+        let h = (original_height * scale).ceil() as u32;
+        return (w.max(1), h.max(1), scale, scale);
+    }
+
+    match (options.width, options.height) {
+        (Some(w), Some(h)) => {
+            // Both dimensions specified - scale to fit, maintaining aspect ratio
+            let scale_x = w as f32 / original_width;
+            let scale_y = h as f32 / original_height;
+            let scale = scale_x.min(scale_y); // Fit within bounds
+            let final_w = (original_width * scale).ceil() as u32;
+            let final_h = (original_height * scale).ceil() as u32;
+            (final_w.max(1), final_h.max(1), scale, scale)
+        }
+        (Some(w), None) => {
+            // Width only - scale proportionally
+            let scale = w as f32 / original_width;
+            let h = (original_height * scale).ceil() as u32;
+            (w.max(1), h.max(1), scale, scale)
+        }
+        (None, Some(h)) => {
+            // Height only - scale proportionally
+            let scale = h as f32 / original_height;
+            let w = (original_width * scale).ceil() as u32;
+            (w.max(1), h.max(1), scale, scale)
+        }
+        (None, None) => {
+            // No constraints - use original size
+            let w = original_width.ceil() as u32;
+            let h = original_height.ceil() as u32;
+            (w.max(1), h.max(1), 1.0, 1.0)
+        }
+    }
+}
+
+// =============================================================================
 // Format Inference
 // =============================================================================
 
@@ -571,6 +1016,12 @@ pub(crate) fn infer_format_and_render(toolkit: &Toolkit, path: &Path) -> Result<
         Some("svg") => SvgPage {
             page: 1,
             declaration: false,
+        }
+        .render_to_file(toolkit, path),
+        #[cfg(feature = "png")]
+        Some("png") => PngPage {
+            page: 1,
+            options: PngOptions::default(),
         }
         .render_to_file(toolkit, path),
         Some("mid") | Some("midi") => Midi.render_to_file(toolkit, path),
@@ -753,6 +1204,186 @@ mod tests {
         let _cloned = opts.clone();
 
         let opts = Mei::with_options().remove_ids(true);
+        let _cloned = opts.clone();
+    }
+}
+
+#[cfg(all(test, feature = "png"))]
+mod png_tests {
+    use super::*;
+
+    #[test]
+    fn test_png_page_builder() {
+        let spec = Png::page(1);
+        assert_eq!(spec.page(), 1);
+        assert!(spec.options.width.is_none());
+        assert!(spec.options.height.is_none());
+        assert!(spec.options.scale.is_none());
+        assert!(spec.options.background.is_none());
+    }
+
+    #[test]
+    fn test_png_page_with_width() {
+        let spec = Png::page(2).width(800);
+        assert_eq!(spec.page(), 2);
+        assert_eq!(spec.options.width, Some(800));
+    }
+
+    #[test]
+    fn test_png_page_with_height() {
+        let spec = Png::page(1).height(600);
+        assert_eq!(spec.options.height, Some(600));
+    }
+
+    #[test]
+    fn test_png_page_with_scale() {
+        let spec = Png::page(1).scale(2.0);
+        assert_eq!(spec.options.scale, Some(2.0));
+    }
+
+    #[test]
+    fn test_png_page_with_background() {
+        let spec = Png::page(1).background(255, 255, 255, 255);
+        assert!(spec.options.background.is_some());
+    }
+
+    #[test]
+    fn test_png_page_with_white_background() {
+        let spec = Png::page(1).white_background();
+        assert!(spec.options.background.is_some());
+    }
+
+    #[test]
+    fn test_png_page_chained_options() {
+        let spec = Png::page(3).width(800).height(600).scale(2.0).white_background();
+        assert_eq!(spec.page(), 3);
+        assert_eq!(spec.options.width, Some(800));
+        assert_eq!(spec.options.height, Some(600));
+        assert_eq!(spec.options.scale, Some(2.0));
+        assert!(spec.options.background.is_some());
+    }
+
+    #[test]
+    fn test_png_pages_builder() {
+        let spec = Png::pages(2, 5);
+        assert_eq!(spec.start, 2);
+        assert_eq!(spec.end, 5);
+    }
+
+    #[test]
+    fn test_png_pages_with_options() {
+        let spec = Png::pages(1, 10).width(1024).white_background();
+        assert_eq!(spec.options.width, Some(1024));
+        assert!(spec.options.background.is_some());
+    }
+
+    #[test]
+    fn test_png_all_pages_builder() {
+        let spec = Png::all_pages();
+        assert!(spec.options.width.is_none());
+    }
+
+    #[test]
+    fn test_png_all_pages_with_options() {
+        let spec = Png::all_pages().scale(1.5).white_background();
+        assert_eq!(spec.options.scale, Some(1.5));
+        assert!(spec.options.background.is_some());
+    }
+
+    #[test]
+    fn test_calculate_png_dimensions_original() {
+        let options = PngOptions::default();
+        let (w, h, sx, sy) = calculate_png_dimensions(100.0, 200.0, &options);
+        assert_eq!(w, 100);
+        assert_eq!(h, 200);
+        assert_eq!(sx, 1.0);
+        assert_eq!(sy, 1.0);
+    }
+
+    #[test]
+    fn test_calculate_png_dimensions_scale() {
+        let options = PngOptions {
+            scale: Some(2.0),
+            ..Default::default()
+        };
+        let (w, h, sx, sy) = calculate_png_dimensions(100.0, 200.0, &options);
+        assert_eq!(w, 200);
+        assert_eq!(h, 400);
+        assert_eq!(sx, 2.0);
+        assert_eq!(sy, 2.0);
+    }
+
+    #[test]
+    fn test_calculate_png_dimensions_width_only() {
+        let options = PngOptions {
+            width: Some(200),
+            ..Default::default()
+        };
+        let (w, h, sx, sy) = calculate_png_dimensions(100.0, 200.0, &options);
+        assert_eq!(w, 200);
+        assert_eq!(h, 400);
+        assert_eq!(sx, 2.0);
+        assert_eq!(sy, 2.0);
+    }
+
+    #[test]
+    fn test_calculate_png_dimensions_height_only() {
+        let options = PngOptions {
+            height: Some(100),
+            ..Default::default()
+        };
+        let (w, h, _sx, _sy) = calculate_png_dimensions(100.0, 200.0, &options);
+        assert_eq!(w, 50);
+        assert_eq!(h, 100);
+    }
+
+    #[test]
+    fn test_calculate_png_dimensions_both() {
+        let options = PngOptions {
+            width: Some(200),
+            height: Some(200),
+            ..Default::default()
+        };
+        // Original is 100x200, so fitting into 200x200 means scale=1.0 (constrained by height)
+        let (w, h, _sx, _sy) = calculate_png_dimensions(100.0, 200.0, &options);
+        // Scale by height: 200/200 = 1.0, so width = 100, height = 200
+        assert_eq!(w, 100);
+        assert_eq!(h, 200);
+    }
+
+    #[test]
+    fn test_png_format_types_are_send_sync() {
+        fn assert_send<T: Send>() {}
+        fn assert_sync<T: Sync>() {}
+
+        assert_send::<Png>();
+        assert_sync::<Png>();
+        assert_send::<PngPage>();
+        assert_send::<PngPages>();
+        assert_send::<PngAllPages>();
+        assert_send::<PngOptions>();
+    }
+
+    #[test]
+    fn test_png_format_debug_impls() {
+        let _ = format!("{:?}", Png::page(1));
+        let _ = format!("{:?}", Png::pages(1, 2));
+        let _ = format!("{:?}", Png::all_pages());
+        let _ = format!("{:?}", PngOptions::default());
+    }
+
+    #[test]
+    fn test_png_format_clone_impls() {
+        let page = Png::page(1).width(800);
+        let _cloned = page.clone();
+
+        let pages = Png::pages(1, 2).scale(2.0);
+        let _cloned = pages.clone();
+
+        let all = Png::all_pages().white_background();
+        let _cloned = all.clone();
+
+        let opts = PngOptions::default();
         let _cloned = opts.clone();
     }
 }

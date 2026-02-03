@@ -276,6 +276,10 @@ pub use render::{
 };
 pub use toolkit::{LoadSource, Toolkit, ZipBase64, ZipBuffer};
 
+// PNG exports (feature-gated)
+#[cfg(feature = "png")]
+pub use render::{Png, PngAllPages, PngOptions, PngPage, PngPages};
+
 // Re-export data crate types when bundled-data feature is enabled
 #[cfg(feature = "bundled-data")]
 pub use verovioxide_data::{

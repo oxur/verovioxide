@@ -6,11 +6,16 @@ This index is automatically generated. Do not edit manually.
 
 | Number | Title | State | Updated |
 |--------|-------|-------|----------|
+| 0004 | PNG Rendering Support | Active | 2026-02-02 |
 | 0003 | Unified Query API with Trait-based `get()` Method | Final | 2026-02-02 |
 | 0002 | Unified Render API with Builder Pattern | Final | 2026-02-02 |
 | 0001 | `verovioxide` Implementation Plan | Final | 2026-02-02 |
 
 ## Documents by State
+
+### Active
+
+- [0004 - PNG Rendering Support](05-active/0004-png-rendering-support.md)
 
 ### Final
 

@@ -1394,3 +1394,302 @@ fn test_render_to_as_svg_pages_creates_directory() {
     assert!(dir_path.exists(), "Pages directory should exist");
     assert!(dir_path.is_dir(), "Should be a directory");
 }
+
+// =============================================================================
+// PNG Rendering Tests (feature-gated)
+// =============================================================================
+
+/// PNG magic bytes for verification.
+#[cfg(feature = "png")]
+const PNG_MAGIC: [u8; 8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+
+/// Helper to verify PNG bytes.
+#[cfg(feature = "png")]
+fn assert_valid_png(bytes: &[u8]) {
+    assert!(
+        bytes.len() > 8,
+        "PNG should have at least 8 bytes for header"
+    );
+    assert_eq!(
+        &bytes[0..8],
+        &PNG_MAGIC,
+        "PNG should start with PNG magic bytes"
+    );
+}
+
+/// Test rendering a single page to PNG bytes.
+#[cfg(feature = "png")]
+#[test]
+#[serial]
+fn test_render_png_page() {
+    use verovioxide::Png;
+
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    let png_bytes: Vec<u8> = voxide.render(Png::page(1)).expect("Failed to render PNG");
+    assert_valid_png(&png_bytes);
+}
+
+/// Test PNG rendering with width option.
+#[cfg(feature = "png")]
+#[test]
+#[serial]
+fn test_render_png_with_width() {
+    use verovioxide::Png;
+
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    let png_bytes: Vec<u8> = voxide
+        .render(Png::page(1).width(800))
+        .expect("Failed to render PNG with width");
+    assert_valid_png(&png_bytes);
+}
+
+/// Test PNG rendering with height option.
+#[cfg(feature = "png")]
+#[test]
+#[serial]
+fn test_render_png_with_height() {
+    use verovioxide::Png;
+
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    let png_bytes: Vec<u8> = voxide
+        .render(Png::page(1).height(600))
+        .expect("Failed to render PNG with height");
+    assert_valid_png(&png_bytes);
+}
+
+/// Test PNG rendering with scale option.
+#[cfg(feature = "png")]
+#[test]
+#[serial]
+fn test_render_png_with_scale() {
+    use verovioxide::Png;
+
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    let png_bytes: Vec<u8> = voxide
+        .render(Png::page(1).scale(2.0))
+        .expect("Failed to render PNG with scale");
+    assert_valid_png(&png_bytes);
+}
+
+/// Test PNG rendering with white background.
+#[cfg(feature = "png")]
+#[test]
+#[serial]
+fn test_render_png_with_white_background() {
+    use verovioxide::Png;
+
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    let png_bytes: Vec<u8> = voxide
+        .render(Png::page(1).white_background())
+        .expect("Failed to render PNG with background");
+    assert_valid_png(&png_bytes);
+}
+
+/// Test PNG rendering with custom RGBA background.
+#[cfg(feature = "png")]
+#[test]
+#[serial]
+fn test_render_png_with_custom_background() {
+    use verovioxide::Png;
+
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    let png_bytes: Vec<u8> = voxide
+        .render(Png::page(1).background(240, 240, 240, 255))
+        .expect("Failed to render PNG with custom background");
+    assert_valid_png(&png_bytes);
+}
+
+/// Test PNG rendering with chained options.
+#[cfg(feature = "png")]
+#[test]
+#[serial]
+fn test_render_png_with_chained_options() {
+    use verovioxide::Png;
+
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    let png_bytes: Vec<u8> = voxide
+        .render(Png::page(1).width(800).scale(1.5).white_background())
+        .expect("Failed to render PNG with chained options");
+    assert_valid_png(&png_bytes);
+}
+
+/// Test rendering all pages to PNG.
+#[cfg(feature = "png")]
+#[test]
+#[serial]
+fn test_render_png_all_pages() {
+    use verovioxide::Png;
+
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    let pages: Vec<Vec<u8>> = voxide
+        .render(Png::all_pages())
+        .expect("Failed to render PNG all pages");
+
+    assert!(!pages.is_empty(), "Should have at least one page");
+    for (i, png) in pages.iter().enumerate() {
+        assert_valid_png(png);
+        assert!(
+            png.len() > 100,
+            "Page {} PNG should have meaningful content",
+            i + 1
+        );
+    }
+}
+
+/// Test rendering a page range to PNG.
+#[cfg(feature = "png")]
+#[test]
+#[serial]
+fn test_render_png_pages_range() {
+    use verovioxide::Png;
+
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    let count = voxide.page_count();
+    if count >= 1 {
+        let pages: Vec<Vec<u8>> = voxide
+            .render(Png::pages(1, count))
+            .expect("Failed to render PNG pages range");
+
+        assert_eq!(pages.len(), count as usize);
+        for png in &pages {
+            assert_valid_png(png);
+        }
+    }
+}
+
+/// Test render_to() with .png extension.
+#[cfg(feature = "png")]
+#[test]
+#[serial]
+fn test_render_to_png_file() {
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+    let output_path = temp_dir.path().join("output.png");
+
+    voxide.render_to(&output_path).expect("Failed to render PNG");
+    assert!(output_path.exists(), "PNG file should exist");
+
+    let content = std::fs::read(&output_path).expect("Failed to read PNG file");
+    assert_valid_png(&content);
+}
+
+/// Test render_to_as() with Png::page().
+#[cfg(feature = "png")]
+#[test]
+#[serial]
+fn test_render_to_as_png_page() {
+    use verovioxide::Png;
+
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+    let output_path = temp_dir.path().join("page.png");
+
+    voxide
+        .render_to_as(&output_path, Png::page(1).width(800))
+        .expect("Failed to render PNG page");
+    assert!(output_path.exists(), "PNG file should exist");
+
+    let content = std::fs::read(&output_path).expect("Failed to read PNG file");
+    assert_valid_png(&content);
+}
+
+/// Test render_to_as() with Png::all_pages() creates directory.
+#[cfg(feature = "png")]
+#[test]
+#[serial]
+fn test_render_to_as_png_all_pages_creates_directory() {
+    use verovioxide::Png;
+
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+    let output_path = temp_dir.path().join("pages.png");
+
+    voxide
+        .render_to_as(&output_path, Png::all_pages())
+        .expect("Failed to render PNG pages");
+
+    // Should create a "pages" directory (without extension)
+    let dir_path = temp_dir.path().join("pages");
+    assert!(dir_path.exists(), "Pages directory should exist");
+    assert!(dir_path.is_dir(), "Should be a directory");
+
+    // Should have page-001.png
+    let page1 = dir_path.join("page-001.png");
+    assert!(page1.exists(), "page-001.png should exist");
+
+    let content = std::fs::read(&page1).expect("Failed to read PNG file");
+    assert_valid_png(&content);
+}
+
+/// Test PNG compatibility with image crate (for viuer).
+#[cfg(feature = "png")]
+#[test]
+#[serial]
+fn test_png_viuer_compatibility() {
+    use verovioxide::Png;
+
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_MEI).expect("Failed to load MEI");
+
+    let png_bytes: Vec<u8> = voxide.render(Png::page(1)).expect("Failed to render PNG");
+
+    // Verify the image crate can load this PNG (viuer uses image internally)
+    let img = image::load_from_memory(&png_bytes).expect("Failed to load PNG with image crate");
+
+    assert!(img.width() > 0, "Image should have positive width");
+    assert!(img.height() > 0, "Image should have positive height");
+}
+
+/// Test PNG rendering from MusicXML source.
+#[cfg(feature = "png")]
+#[test]
+#[serial]
+fn test_render_png_from_musicxml() {
+    use verovioxide::Png;
+
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide
+        .load(SIMPLE_MUSICXML)
+        .expect("Failed to load MusicXML");
+
+    let png_bytes: Vec<u8> = voxide.render(Png::page(1)).expect("Failed to render PNG");
+    assert_valid_png(&png_bytes);
+}
+
+/// Test PNG rendering from ABC source.
+#[cfg(feature = "png")]
+#[test]
+#[serial]
+fn test_render_png_from_abc() {
+    use verovioxide::Png;
+
+    let mut voxide = Toolkit::new().expect("Failed to create toolkit");
+    voxide.load(SIMPLE_ABC).expect("Failed to load ABC");
+
+    let png_bytes: Vec<u8> = voxide.render(Png::page(1)).expect("Failed to render PNG");
+    assert_valid_png(&png_bytes);
+}

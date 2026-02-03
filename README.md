@@ -18,6 +18,7 @@
 - **Zero runtime dependencies**: Verovio statically linked
 - **Complete API coverage**: 100% of the Verovio C++ API wrapped in safe Rust
 - **Production ready**: Comprehensive error handling and 95%+ test coverage
+- **PNG support**: Verovioxide extends beyond the Verovio C++ API with PNG output (in-memory and to-file)
 
 ## Installation
 
@@ -328,6 +329,74 @@ Format detection is automatic based on file content.
 | MIDI | `render(Midi)` | Base64-encoded MIDI for playback |
 | Timemap | `render(Timemap)` | JSON timing data for synchronization |
 | Expansion Map | `render(ExpansionMap)` | JSON expansion/repeat data |
+| PNG | `render(Png::page(1))` | Raster image for display/printing |
+
+## PNG Rendering
+
+PNG support is enabled by default via the `png` feature. It uses [resvg](https://github.com/linebender/resvg) for high-quality SVG-to-PNG conversion.
+
+### In-Memory PNG
+
+```rust
+use verovioxide::Png;
+
+// Basic rendering (returns Vec<u8>)
+let png_bytes: Vec<u8> = voxide.render(Png::page(1))?;
+
+// With options
+let png_bytes = voxide.render(
+    Png::page(1)
+        .width(800)           // Scale to 800px width
+        .height(600)          // Or scale to fit height
+        .scale(2.0)           // Or use zoom factor
+        .white_background()   // White instead of transparent
+)?;
+
+// Custom background color
+let png_bytes = voxide.render(
+    Png::page(1).background(240, 240, 240, 255)  // Light gray
+)?;
+
+// Render all pages
+let all_pngs: Vec<Vec<u8>> = voxide.render(Png::all_pages())?;
+
+// Render page range
+let pngs: Vec<Vec<u8>> = voxide.render(Png::pages(2, 5))?;
+```
+
+### File Rendering
+
+```rust
+// Format inferred from extension
+voxide.render_to("output.png")?;
+
+// Explicit control
+voxide.render_to_as("output.png", Png::page(3))?;
+voxide.render_to_as("output.png", Png::all_pages())?;  // Creates output/ directory
+```
+
+### Terminal Display with viuer
+
+The PNG bytes are compatible with the `image` crate for terminal display:
+
+```rust
+use verovioxide::Png;
+use image::load_from_memory;
+use viuer::Config;
+
+let png_bytes = voxide.render(Png::page(1).width(800))?;
+let img = load_from_memory(&png_bytes)?;
+viuer::print(&img, &Config::default())?;
+```
+
+### Disabling PNG
+
+To disable PNG support (reduces compile time and binary size):
+
+```toml
+[dependencies]
+verovioxide = { version = "0.3", default-features = false, features = ["bundled-data"] }
+```
 
 ## Feature Flags
 
@@ -336,6 +405,7 @@ Format detection is automatic based on file content.
 | Feature | Default | Description |
 |---------|---------|-------------|
 | `bundled-data` | Yes | Include bundled SMuFL fonts and resources |
+| `png` | Yes | PNG rendering support via resvg |
 | `font-leipzig` | Yes | Leipzig SMuFL font (default font) |
 | `font-bravura` | No | Bravura SMuFL font |
 | `font-gootville` | No | Gootville SMuFL font |
