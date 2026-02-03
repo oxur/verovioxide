@@ -625,7 +625,7 @@ fn test_readme_quick_start_pattern() {
 // =============================================================================
 
 use verovioxide::{
-    Attrs, Elements, ExpansionMap, Features, Humdrum, Mei, Midi, Page, Pae, Svg, Time, Timemap,
+    Attrs, Elements, ExpansionMap, Features, Humdrum, Mei, Midi, Pae, Page, Svg, Time, Timemap,
     Times,
 };
 
@@ -1291,10 +1291,7 @@ fn test_render_to_as_timemap_with_options() {
     let output_path = temp_dir.path().join("output.json");
 
     voxide
-        .render_to_as(
-            &output_path,
-            Timemap::with_options().include_measures(true),
-        )
+        .render_to_as(&output_path, Timemap::with_options().include_measures(true))
         .expect("Failed to render timemap with options");
     assert!(output_path.exists(), "Timemap file should exist");
 }
@@ -1586,7 +1583,9 @@ fn test_render_to_png_file() {
     let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
     let output_path = temp_dir.path().join("output.png");
 
-    voxide.render_to(&output_path).expect("Failed to render PNG");
+    voxide
+        .render_to(&output_path)
+        .expect("Failed to render PNG");
     assert!(output_path.exists(), "PNG file should exist");
 
     let content = std::fs::read(&output_path).expect("Failed to read PNG file");

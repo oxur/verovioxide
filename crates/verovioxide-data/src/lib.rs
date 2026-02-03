@@ -400,11 +400,7 @@ mod tests {
         let fonts = available_fonts();
         let mut seen = std::collections::HashSet::new();
         for font in &fonts {
-            assert!(
-                seen.insert(*font),
-                "Font {} appears more than once",
-                font
-            );
+            assert!(seen.insert(*font), "Font {} appears more than once", font);
         }
     }
 
@@ -414,12 +410,14 @@ mod tests {
 
         // Read extracted file
         let extracted_path = temp_dir.path().join("Bravura.xml");
-        let extracted_content = std::fs::read_to_string(&extracted_path)
-            .expect("Failed to read extracted file");
+        let extracted_content =
+            std::fs::read_to_string(&extracted_path).expect("Failed to read extracted file");
 
         // Read embedded file
         let dir = resource_dir();
-        let embedded = dir.get_file("Bravura.xml").expect("Bravura.xml should exist");
+        let embedded = dir
+            .get_file("Bravura.xml")
+            .expect("Bravura.xml should exist");
         let embedded_content = embedded.contents_utf8().expect("Should be valid UTF-8");
 
         assert_eq!(
@@ -455,10 +453,8 @@ mod tests {
 
     #[test]
     fn test_data_error_debug() {
-        let err = DataError::TempDirCreation(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "test",
-        ));
+        let err =
+            DataError::TempDirCreation(std::io::Error::new(std::io::ErrorKind::Other, "test"));
         let _ = format!("{:?}", err);
 
         let err = DataError::DirectoryCreation {

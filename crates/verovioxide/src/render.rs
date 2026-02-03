@@ -912,8 +912,9 @@ impl RenderSpec for PngAllPages {
 #[cfg(feature = "png")]
 fn svg_to_png(svg: &str, options: &PngOptions) -> Result<Vec<u8>> {
     // Parse SVG using usvg
-    let tree = usvg::Tree::from_str(svg, &usvg::Options::default())
-        .map_err(|e| Error::RenderError(format!("failed to parse SVG for PNG conversion: {}", e)))?;
+    let tree = usvg::Tree::from_str(svg, &usvg::Options::default()).map_err(|e| {
+        Error::RenderError(format!("failed to parse SVG for PNG conversion: {}", e))
+    })?;
 
     // Get original SVG dimensions
     let svg_size = tree.size();
@@ -1255,7 +1256,11 @@ mod png_tests {
 
     #[test]
     fn test_png_page_chained_options() {
-        let spec = Png::page(3).width(800).height(600).scale(2.0).white_background();
+        let spec = Png::page(3)
+            .width(800)
+            .height(600)
+            .scale(2.0)
+            .white_background();
         assert_eq!(spec.page(), 3);
         assert_eq!(spec.options.width, Some(800));
         assert_eq!(spec.options.height, Some(600));
