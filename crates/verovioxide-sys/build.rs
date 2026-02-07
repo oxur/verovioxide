@@ -138,7 +138,8 @@ fn fetch_prebuilt_sha256(target: &str) -> Result<String, String> {
         }
 
         let json = response
-            .into_string()
+            .into_body()
+            .read_to_string()
             .map_err(|e| format!("Failed to read hash manifest: {}", e))?;
 
         // Cache for future builds
@@ -423,9 +424,9 @@ fn download_file(url: &str, dest: &std::path::Path) -> Result<(), String> {
         ));
     }
 
-    let mut reader = response.into_reader();
-    let mut data = Vec::new();
-    std::io::Read::read_to_end(&mut reader, &mut data)
+    let data = response
+        .into_body()
+        .read_to_vec()
         .map_err(|e| format!("Failed to read download response: {}", e))?;
 
     std::fs::write(dest, &data).map_err(|e| format!("Failed to write downloaded file: {}", e))?;

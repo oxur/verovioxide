@@ -641,7 +641,7 @@ pub struct PngOptions {
     /// Zoom factor (1.0 = original size, 2.0 = double size).
     pub(crate) scale: Option<f32>,
     /// Background color. None = transparent (default).
-    pub(crate) background: Option<tiny_skia::Color>,
+    pub(crate) background: Option<resvg::tiny_skia::Color>,
 }
 
 /// Single PNG page render specification.
@@ -685,7 +685,7 @@ impl PngPage {
     ///
     /// *Added in 0.3.0.*
     pub fn background(mut self, r: u8, g: u8, b: u8, a: u8) -> Self {
-        self.options.background = Some(tiny_skia::Color::from_rgba8(r, g, b, a));
+        self.options.background = Some(resvg::tiny_skia::Color::from_rgba8(r, g, b, a));
         self
     }
 
@@ -693,7 +693,7 @@ impl PngPage {
     ///
     /// *Added in 0.3.0.*
     pub fn white_background(mut self) -> Self {
-        self.options.background = Some(tiny_skia::Color::WHITE);
+        self.options.background = Some(resvg::tiny_skia::Color::WHITE);
         self
     }
 
@@ -764,7 +764,7 @@ impl PngPages {
     ///
     /// *Added in 0.3.0.*
     pub fn background(mut self, r: u8, g: u8, b: u8, a: u8) -> Self {
-        self.options.background = Some(tiny_skia::Color::from_rgba8(r, g, b, a));
+        self.options.background = Some(resvg::tiny_skia::Color::from_rgba8(r, g, b, a));
         self
     }
 
@@ -772,7 +772,7 @@ impl PngPages {
     ///
     /// *Added in 0.3.0.*
     pub fn white_background(mut self) -> Self {
-        self.options.background = Some(tiny_skia::Color::WHITE);
+        self.options.background = Some(resvg::tiny_skia::Color::WHITE);
         self
     }
 }
@@ -849,7 +849,7 @@ impl PngAllPages {
     ///
     /// *Added in 0.3.0.*
     pub fn background(mut self, r: u8, g: u8, b: u8, a: u8) -> Self {
-        self.options.background = Some(tiny_skia::Color::from_rgba8(r, g, b, a));
+        self.options.background = Some(resvg::tiny_skia::Color::from_rgba8(r, g, b, a));
         self
     }
 
@@ -857,7 +857,7 @@ impl PngAllPages {
     ///
     /// *Added in 0.3.0.*
     pub fn white_background(mut self) -> Self {
-        self.options.background = Some(tiny_skia::Color::WHITE);
+        self.options.background = Some(resvg::tiny_skia::Color::WHITE);
         self
     }
 }
@@ -912,7 +912,7 @@ impl RenderSpec for PngAllPages {
 #[cfg(feature = "png")]
 fn svg_to_png(svg: &str, options: &PngOptions) -> Result<Vec<u8>> {
     // Parse SVG using usvg
-    let tree = usvg::Tree::from_str(svg, &usvg::Options::default()).map_err(|e| {
+    let tree = resvg::usvg::Tree::from_str(svg, &resvg::usvg::Options::default()).map_err(|e| {
         Error::RenderError(format!("failed to parse SVG for PNG conversion: {}", e))
     })?;
 
@@ -926,12 +926,13 @@ fn svg_to_png(svg: &str, options: &PngOptions) -> Result<Vec<u8>> {
         calculate_png_dimensions(original_width, original_height, options);
 
     // Create pixmap with target dimensions
-    let mut pixmap = tiny_skia::Pixmap::new(target_width, target_height).ok_or_else(|| {
-        Error::RenderError(format!(
-            "failed to create pixmap with dimensions {}x{}",
-            target_width, target_height
-        ))
-    })?;
+    let mut pixmap =
+        resvg::tiny_skia::Pixmap::new(target_width, target_height).ok_or_else(|| {
+            Error::RenderError(format!(
+                "failed to create pixmap with dimensions {}x{}",
+                target_width, target_height
+            ))
+        })?;
 
     // Apply background color if specified (otherwise transparent)
     if let Some(bg) = options.background {
@@ -939,7 +940,7 @@ fn svg_to_png(svg: &str, options: &PngOptions) -> Result<Vec<u8>> {
     }
 
     // Create transform for scaling
-    let transform = tiny_skia::Transform::from_scale(scale_x, scale_y);
+    let transform = resvg::tiny_skia::Transform::from_scale(scale_x, scale_y);
 
     // Render SVG to pixmap
     resvg::render(&tree, transform, &mut pixmap.as_mut());
