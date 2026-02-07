@@ -41,8 +41,8 @@ Or in your `Cargo.toml`:
 
 ```toml
 [dependencies]
-verovioxide = "0.2"
-verovioxide-sys = { version = "0.2", features = ["prebuilt"] }
+verovioxide = "0.3"
+verovioxide-sys = { version = "0.3", features = ["prebuilt"] }
 ```
 
 Prebuilt binaries are available for:
@@ -429,7 +429,7 @@ The `prebuilt` and `bundled` features can be used together - if prebuilt downloa
 
 ```toml
 [dependencies]
-verovioxide = { version = "0.2", features = ["font-bravura", "font-leland"] }
+verovioxide = { version = "0.3", features = ["font-bravura", "font-leland"] }
 ```
 
 ### Custom Resource Path
@@ -438,7 +438,7 @@ To use your own Verovio resources instead of bundled data:
 
 ```toml
 [dependencies]
-verovioxide = { version = "0.2", default-features = false }
+verovioxide = { version = "0.3", default-features = false }
 ```
 
 ```rust

@@ -28,13 +28,13 @@ Note: Bravura baseline data is always included as it's required for Verovio's gl
 ```toml
 [dependencies]
 # Default: Leipzig font only
-verovioxide-data = "0.2"
+verovioxide-data = "0.3"
 
 # Specific fonts
-verovioxide-data = { version = "0.2", features = ["font-bravura", "font-leland"] }
+verovioxide-data = { version = "0.3", features = ["font-bravura", "font-leland"] }
 
 # All fonts
-verovioxide-data = { version = "0.2", features = ["all-fonts"] }
+verovioxide-data = { version = "0.3", features = ["all-fonts"] }
 ```
 
 ## Usage

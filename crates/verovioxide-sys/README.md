@@ -29,7 +29,7 @@ For faster initial builds, enable the `prebuilt` feature:
 
 ```toml
 [dependencies]
-verovioxide-sys = { version = "0.2", features = ["prebuilt"] }
+verovioxide-sys = { version = "0.3", features = ["prebuilt"] }
 ```
 
 Prebuilt binaries are available for:
