@@ -23,6 +23,9 @@ VEROVIO_VERSION := 5.7.0
 # List of binaries to build and install
 BINARIES := tbd
 
+# Git remotes to push to
+GIT_REMOTES := macpro github codeberg
+
 # Default target
 .DEFAULT_GOAL := help
 
@@ -257,12 +260,11 @@ tracked-files:
 
 push:
 	@echo "$(BLUE)Pushing changes ...$(RESET)"
-	@echo "$(CYAN)• Codeberg:$(RESET)"
-	@git push codeberg main && git push codeberg --tags
-	@echo "$(GREEN)✓ Pushed$(RESET)"
-	@echo "$(CYAN)• Github:$(RESET)"
-	@git push github main && git push github --tags
-	@echo "$(GREEN)✓ Pushed$(RESET)"
+	@for remote in $(GIT_REMOTES); do \
+		echo "$(CYAN)• $$remote:$(RESET)"; \
+		git push $$remote main && git push $$remote --tags; \
+		echo "$(GREEN)✓ Pushed$(RESET)"; \
+	done
 
 # Crates in dependency order (leaf crates first, dependent crates later)
 # ECL crates: design -> core -> steps -> workflows -> cli -> $(CODE_NAME)
