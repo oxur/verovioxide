@@ -179,6 +179,11 @@ pub struct Options {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub breaks: Option<BreakMode>,
 
+    /// Maximum number of systems (lines of music) per page. Set to 1 to render
+    /// one system per page. Ignored unless `breaks` allows page breaks.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub system_max_per_page: Option<u32>,
+
     /// Condense mode for dense layouts.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub condense: Option<CondenseMode>,
@@ -457,6 +462,14 @@ impl OptionsBuilder {
     #[must_use]
     pub fn breaks(mut self, mode: BreakMode) -> Self {
         self.options.breaks = Some(mode);
+        self
+    }
+
+    /// Sets the maximum number of systems (lines of music) per page. Set to 1
+    /// to render one system per page.
+    #[must_use]
+    pub fn system_max_per_page(mut self, max: u32) -> Self {
+        self.options.system_max_per_page = Some(max);
         self
     }
 
@@ -743,6 +756,13 @@ mod tests {
         let json = options.to_json().unwrap();
         assert!(json.contains("scale"));
         assert!(!json.contains("pageWidth"));
+    }
+
+    #[test]
+    fn test_system_max_per_page() {
+        let options = Options::builder().system_max_per_page(1).build();
+        assert_eq!(options.system_max_per_page, Some(1));
+        assert!(options.to_json().unwrap().contains("\"systemMaxPerPage\":1"));
     }
 
     #[test]
